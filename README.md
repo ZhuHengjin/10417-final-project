@@ -126,28 +126,3 @@ For any questions, please contact Yonglong Tian (yonglong@mit.edu).
 ## Acknowledgement
 
 Thanks to Baoyun Peng for providing the code of CC and to Frederick Tung for verifying our reimplementation of SP. Thanks also go to authors of other papers who make their code publicly available.
-
-
-
-
-
----
-
-# New content
-
-Extract csv from the `logs` folder
-
-```bash
-python3 report/extract_log.py --run_dir logs/kd/ --output report/logs/kd.csv
-```
-
-```bash
-python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_rkd_r:1_a:0.0_b:1.0_1 --output report/logs/rks.csv
-```
-
-```bash
-python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_r:1_a:0.0_b:0.8_1 --output report/logs/crd.csv
-
-```bash
-python3 report/plot_training_curves.py --csv report/logs/kd.csv report/logs/rkd.csv report/logs/crd.csv --out_dir report/graphs
-```
