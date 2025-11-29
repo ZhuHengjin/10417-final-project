@@ -73,11 +73,6 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
     # set teacher as eval()
     module_list[-1].eval()
 
-    if opt.distill == 'abound':
-        module_list[1].eval()
-    elif opt.distill == 'factor':
-        module_list[2].eval()
-
     criterion_cls = criterion_list[0]
     criterion_div = criterion_list[1]
     criterion_kd = criterion_list[2]
@@ -93,7 +88,7 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
 
     end = time.time()
     for idx, data in enumerate(train_loader):
-        if opt.distill in ['crd']:
+        if opt.distill == 'crd':
             input, target, index, contrast_idx = data
         else:
             input, target, index = data
@@ -104,13 +99,11 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
             input = input.cuda()
             target = target.cuda()
             index = index.cuda()
-            if opt.distill in ['crd']:
-                contrast_idx = contrast_idx.cuda()
+            if opt.distill == 'crd':
+                contrast_idx = contrast_idx.cuda() # type: ignore
 
         # ===================forward=====================
         preact = False
-        if opt.distill in ['abound']:
-            preact = True
         feat_s, logit_s = model_s(input, is_feat=True, preact=preact)
         with torch.no_grad():
             feat_t, logit_t = model_t(input, is_feat=True, preact=preact)
@@ -123,61 +116,14 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
         # other kd beyond KL divergence
         if opt.distill == 'kd':
             loss_kd = 0
-        elif opt.distill == 'hint':
-            f_s = module_list[1](feat_s[opt.hint_layer])
-            f_t = feat_t[opt.hint_layer]
-            loss_kd = criterion_kd(f_s, f_t)
         elif opt.distill == 'crd':
             f_s = feat_s[-1]
             f_t = feat_t[-1]
-            loss_kd = criterion_kd(f_s, f_t, index, contrast_idx)
-        elif opt.distill == 'attention':
-            g_s = feat_s[1:-1]
-            g_t = feat_t[1:-1]
-            loss_group = criterion_kd(g_s, g_t)
-            loss_kd = sum(loss_group)
-        elif opt.distill == 'nst':
-            g_s = feat_s[1:-1]
-            g_t = feat_t[1:-1]
-            loss_group = criterion_kd(g_s, g_t)
-            loss_kd = sum(loss_group)
-        elif opt.distill == 'similarity':
-            g_s = [feat_s[-2]]
-            g_t = [feat_t[-2]]
-            loss_group = criterion_kd(g_s, g_t)
-            loss_kd = sum(loss_group)
+            loss_kd = criterion_kd(f_s, f_t, index, contrast_idx) # type: ignore
         elif opt.distill == 'rkd':
             f_s = feat_s[-1]
             f_t = feat_t[-1]
             loss_kd = criterion_kd(f_s, f_t)
-        elif opt.distill == 'pkt':
-            f_s = feat_s[-1]
-            f_t = feat_t[-1]
-            loss_kd = criterion_kd(f_s, f_t)
-        elif opt.distill == 'kdsvd':
-            g_s = feat_s[1:-1]
-            g_t = feat_t[1:-1]
-            loss_group = criterion_kd(g_s, g_t)
-            loss_kd = sum(loss_group)
-        elif opt.distill == 'correlation':
-            f_s = module_list[1](feat_s[-1])
-            f_t = module_list[2](feat_t[-1])
-            loss_kd = criterion_kd(f_s, f_t)
-        elif opt.distill == 'vid':
-            g_s = feat_s[1:-1]
-            g_t = feat_t[1:-1]
-            loss_group = [c(f_s, f_t) for f_s, f_t, c in zip(g_s, g_t, criterion_kd)]
-            loss_kd = sum(loss_group)
-        elif opt.distill == 'abound':
-            # can also add loss to this stage
-            loss_kd = 0
-        elif opt.distill == 'fsp':
-            # can also add loss to this stage
-            loss_kd = 0
-        elif opt.distill == 'factor':
-            factor_s = module_list[1](feat_s[-2])
-            factor_t = module_list[2](feat_t[-2], is_factor=True)
-            loss_kd = criterion_kd(factor_s, factor_t)
         else:
             raise NotImplementedError(opt.distill)
 

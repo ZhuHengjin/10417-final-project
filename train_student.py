@@ -157,7 +157,7 @@ def main():
                                                                                k=opt.nce_k,
                                                                                mode=opt.mode)
         else:
-            train_loader, val_loader, n_data = get_cifar100_dataloaders(batch_size=opt.batch_size,
+            train_loader, val_loader, n_data = get_cifar100_dataloaders(batch_size=opt.batch_size, # type: ignore
                                                                         num_workers=opt.num_workers,
                                                                         is_instance=True)
         n_cls = 100
@@ -183,11 +183,6 @@ def main():
     criterion_div = DistillKL(opt.kd_T)
     if opt.distill == 'kd':
         criterion_kd = DistillKL(opt.kd_T)
-    elif opt.distill == 'hint':
-        criterion_kd = HintLoss()
-        regress_s = ConvReg(feat_s[opt.hint_layer].shape, feat_t[opt.hint_layer].shape)
-        module_list.append(regress_s)
-        trainable_list.append(regress_s)
     elif opt.distill == 'crd':
         opt.s_dim = feat_s[-1].shape[1]
         opt.t_dim = feat_t[-1].shape[1]
@@ -197,71 +192,8 @@ def main():
         module_list.append(criterion_kd.embed_t)
         trainable_list.append(criterion_kd.embed_s)
         trainable_list.append(criterion_kd.embed_t)
-    elif opt.distill == 'attention':
-        criterion_kd = Attention()
-    elif opt.distill == 'nst':
-        criterion_kd = NSTLoss()
-    elif opt.distill == 'similarity':
-        criterion_kd = Similarity()
     elif opt.distill == 'rkd':
         criterion_kd = RKDLoss()
-    elif opt.distill == 'pkt':
-        criterion_kd = PKT()
-    elif opt.distill == 'kdsvd':
-        criterion_kd = KDSVD()
-    elif opt.distill == 'correlation':
-        criterion_kd = Correlation()
-        embed_s = LinearEmbed(feat_s[-1].shape[1], opt.feat_dim)
-        embed_t = LinearEmbed(feat_t[-1].shape[1], opt.feat_dim)
-        module_list.append(embed_s)
-        module_list.append(embed_t)
-        trainable_list.append(embed_s)
-        trainable_list.append(embed_t)
-    elif opt.distill == 'vid':
-        s_n = [f.shape[1] for f in feat_s[1:-1]]
-        t_n = [f.shape[1] for f in feat_t[1:-1]]
-        criterion_kd = nn.ModuleList(
-            [VIDLoss(s, t, t) for s, t in zip(s_n, t_n)]
-        )
-        # add this as some parameters in VIDLoss need to be updated
-        trainable_list.append(criterion_kd)
-    elif opt.distill == 'abound':
-        s_shapes = [f.shape for f in feat_s[1:-1]]
-        t_shapes = [f.shape for f in feat_t[1:-1]]
-        connector = Connector(s_shapes, t_shapes)
-        # init stage training
-        init_trainable_list = nn.ModuleList([])
-        init_trainable_list.append(connector)
-        init_trainable_list.append(model_s.get_feat_modules())
-        criterion_kd = ABLoss(len(feat_s[1:-1]))
-        init(model_s, model_t, init_trainable_list, criterion_kd, train_loader, logger, opt)
-        # classification
-        module_list.append(connector)
-    elif opt.distill == 'factor':
-        s_shape = feat_s[-2].shape
-        t_shape = feat_t[-2].shape
-        paraphraser = Paraphraser(t_shape)
-        translator = Translator(s_shape, t_shape)
-        # init stage training
-        init_trainable_list = nn.ModuleList([])
-        init_trainable_list.append(paraphraser)
-        criterion_init = nn.MSELoss()
-        init(model_s, model_t, init_trainable_list, criterion_init, train_loader, logger, opt)
-        # classification
-        criterion_kd = FactorTransfer()
-        module_list.append(translator)
-        module_list.append(paraphraser)
-        trainable_list.append(translator)
-    elif opt.distill == 'fsp':
-        s_shapes = [s.shape for s in feat_s[:-1]]
-        t_shapes = [t.shape for t in feat_t[:-1]]
-        criterion_kd = FSP(s_shapes, t_shapes)
-        # init stage training
-        init_trainable_list = nn.ModuleList([])
-        init_trainable_list.append(model_s.get_feat_modules())
-        init(model_s, model_t, init_trainable_list, criterion_kd, train_loader, logger, opt)
-        # classification training
-        pass
     else:
         raise NotImplementedError(opt.distill)
 

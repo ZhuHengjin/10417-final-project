@@ -64,7 +64,7 @@ class ContrastLoss(nn.Module):
         Pn = 1 / float(self.n_data)
 
         # loss for positive pair
-        P_pos = x.select(1, 0)
+        P_pos = x.select(1, 0) # Models density/score for the positive pair
         log_D1 = torch.div(P_pos, P_pos.add(m * Pn + eps)).log_()
 
         # loss for K negative pair
