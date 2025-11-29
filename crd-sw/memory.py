@@ -7,16 +7,20 @@ class ContrastMemory(nn.Module):
     """
     memory buffer that supplies large amount of negative samples.
     """
-    def __init__(self, inputSize, outputSize, K, T=0.07, momentum=0.5):
+    def __init__(self, inputSize, outputSize, K, T=0.07, momentum=0.5, semantic_alpha=0.0, semantic_tau=None):
         super(ContrastMemory, self).__init__()
         self.nLem = outputSize
         self.unigrams = torch.ones(self.nLem)
         self.multinomial = AliasMethod(self.unigrams)
         self.multinomial.cuda()
         self.K = K
+        self.semantic_alpha = semantic_alpha
+        # If None we will reuse T inside forward
+        self.semantic_tau = semantic_tau
 
         self.register_buffer('params', torch.tensor([K, T, -1, -1, momentum]))
         stdv = 1. / math.sqrt(inputSize / 3)
+        # v1: student memory, v2: teacher memory
         self.register_buffer('memory_v1', torch.rand(outputSize, inputSize).mul_(2 * stdv).add_(-stdv))
         self.register_buffer('memory_v2', torch.rand(outputSize, inputSize).mul_(2 * stdv).add_(-stdv))
 
@@ -25,6 +29,7 @@ class ContrastMemory(nn.Module):
         T = self.params[1].item()
         Z_v1 = self.params[2].item()
         Z_v2 = self.params[3].item()
+        tau_sem = self.semantic_tau if self.semantic_tau is not None else T
 
         momentum = self.params[4].item()
         batchSize = v1.size(0)
@@ -45,6 +50,14 @@ class ContrastMemory(nn.Module):
         weight_v2 = weight_v2.view(batchSize, K + 1, inputSize)
         out_v1 = torch.bmm(weight_v2, v1.view(batchSize, inputSize, 1))
         out_v1 = torch.exp(torch.div(out_v1, T))
+
+        # semantic weights for negative samples based on teacher-teacher similarity
+        w_neg = None
+        if self.semantic_alpha != 0:
+            anchor_t = v2.view(batchSize, 1, inputSize)  # [B,1,D]
+            cos_tt = (weight_v2 * anchor_t).sum(dim=2)   # [B,K+1]
+            w_all = 1.0 + self.semantic_alpha * torch.exp(torch.div(cos_tt, tau_sem))
+            w_neg = w_all[:, 1:]  # drop the positive slot
 
         # set Z if haven't been set yet
         if Z_v1 < 0:
@@ -76,7 +89,7 @@ class ContrastMemory(nn.Module):
             updated_v2 = ab_pos.div(ab_norm)
             self.memory_v2.index_copy_(0, y, updated_v2)
 
-        return out_v1, out_v2
+        return out_v1, out_v2, w_neg
 
 
 class AliasMethod(object):

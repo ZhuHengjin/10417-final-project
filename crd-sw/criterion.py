@@ -24,7 +24,10 @@ class CRDLoss(nn.Module):
         super(CRDLoss, self).__init__()
         self.embed_s = Embed(opt.s_dim, opt.feat_dim)
         self.embed_t = Embed(opt.t_dim, opt.feat_dim)
-        self.contrast = ContrastMemory(opt.feat_dim, opt.n_data, opt.nce_k, opt.nce_t, opt.nce_m)
+        sem_alpha = getattr(opt, 'sw_alpha', 0.0)
+        sem_tau = getattr(opt, 'sw_tau', opt.nce_t)
+        self.contrast = ContrastMemory(opt.feat_dim, opt.n_data, opt.nce_k, opt.nce_t, opt.nce_m,
+                                       semantic_alpha=sem_alpha, semantic_tau=sem_tau)
         self.criterion_t = ContrastLoss(opt.n_data)
         self.criterion_s = ContrastLoss(opt.n_data)
 
@@ -41,38 +44,36 @@ class CRDLoss(nn.Module):
         """
         f_s = self.embed_s(f_s)
         f_t = self.embed_t(f_t)
-        out_s, out_t = self.contrast(f_s, f_t, idx, contrast_idx)
+        out_s, out_t, w_neg_t = self.contrast(f_s, f_t, idx, contrast_idx)
         s_loss = self.criterion_s(out_s)
-        t_loss = self.criterion_t(out_t)
+        t_loss = self.criterion_t(out_t, w_neg=w_neg_t)
         loss = s_loss + t_loss
         return loss
 
 
 class ContrastLoss(nn.Module):
-    """
-    contrastive loss, corresponding to Eq (18)
-    """
     def __init__(self, n_data):
         super(ContrastLoss, self).__init__()
         self.n_data = n_data
 
-    def forward(self, x):
+    def forward(self, x, w_neg=None):
         bsz = x.shape[0]
         m = x.size(1) - 1
-
-        # noise distribution
         Pn = 1 / float(self.n_data)
 
-        # loss for positive pair
+        # # loss for positive pair: log h
         P_pos = x.select(1, 0) # Models density/score for the positive pair
         log_D1 = torch.div(P_pos, P_pos.add(m * Pn + eps)).log_()
 
-        # loss for K negative pair
+        # # loss for negative pair: log(1 - h)
         P_neg = x.narrow(1, 1, m)
         log_D0 = torch.div(P_neg.clone().fill_(m * Pn), P_neg.add(m * Pn + eps)).log_()
 
-        loss = - (log_D1.sum(0) + log_D0.view(-1, 1).sum(0)) / bsz
+        if w_neg is not None:
+            # make sure shape matches [bsz, m]
+            log_D0 = log_D0 * w_neg
 
+        loss = - (log_D1.sum(0) + log_D0.view(-1, 1).sum(0)) / bsz
         return loss
 
 
