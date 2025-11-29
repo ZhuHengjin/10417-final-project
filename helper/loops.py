@@ -88,7 +88,7 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
 
     end = time.time()
     for idx, data in enumerate(train_loader):
-        if opt.distill == 'crd':
+        if opt.distill in ['crd', 'crd_sw']:
             input, target, index, contrast_idx = data
         else:
             input, target, index = data
@@ -99,7 +99,7 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
             input = input.cuda()
             target = target.cuda()
             index = index.cuda()
-            if opt.distill == 'crd':
+            if opt.distill in ['crd', 'crd_sw']:
                 contrast_idx = contrast_idx.cuda() # type: ignore
 
         # ===================forward=====================
@@ -116,7 +116,7 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
         # other kd beyond KL divergence
         if opt.distill == 'kd':
             loss_kd = 0
-        elif opt.distill == 'crd':
+        elif opt.distill in ['crd', 'crd_sw']:
             f_s = feat_s[-1]
             f_t = feat_t[-1]
             loss_kd = criterion_kd(f_s, f_t, index, contrast_idx) # type: ignore

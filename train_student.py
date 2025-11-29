@@ -8,7 +8,6 @@ import os
 import argparse
 import socket
 import time
-
 # import tensorboard_logger as tb_logger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -28,6 +27,7 @@ from helper.util import adjust_learning_rate
 from distiller_zoo import DistillKL, HintLoss, Attention, Similarity, Correlation, VIDLoss, RKDLoss
 from distiller_zoo import PKT, ABLoss, FactorTransfer, KDSVD, FSP, NSTLoss
 from crd.criterion import CRDLoss
+from crd_sw.criterion import CRDLoss as SWCRDLoss
 
 from helper.loops import train_distill as train, validate
 from helper.pretrain import init
@@ -67,7 +67,8 @@ def parse_option():
 
     # distillation
     parser.add_argument('--distill', type=str, default='kd', choices=['kd', 'hint', 'attention', 'similarity',
-                                                                      'correlation', 'vid', 'crd', 'kdsvd', 'fsp',
+                                                                      'correlation', 'vid', 'crd', 'crd_sw', 'crd-sw',
+                                                                      'kdsvd', 'fsp',
                                                                       'rkd', 'pkt', 'abound', 'factor', 'nst'])
     parser.add_argument('--trial', type=str, default='1', help='trial id')
 
@@ -84,11 +85,15 @@ def parse_option():
     parser.add_argument('--nce_k', default=16384, type=int, help='number of negative samples for NCE')
     parser.add_argument('--nce_t', default=0.07, type=float, help='temperature parameter for softmax')
     parser.add_argument('--nce_m', default=0.5, type=float, help='momentum for non-parametric updates')
+    parser.add_argument('--sw_alpha', type=float, default=0.0, help='semantic weight scale for SW-CRD negatives')
+    parser.add_argument('--sw_tau', type=float, default=None, help='temperature for semantic weighting; default uses nce_t')
 
     # hint layer
     parser.add_argument('--hint_layer', default=2, type=int, choices=[0, 1, 2, 3, 4])
 
     opt = parser.parse_args()
+    if opt.distill == 'crd-sw':
+        opt.distill = 'crd_sw'
 
     # set different learning rate from these 4 models
     if opt.model_s in ['MobileNetV2', 'ShuffleV1', 'ShuffleV2']:
@@ -151,7 +156,7 @@ def main():
     logger = SummaryWriter(log_dir=opt.tb_folder)
     # dataloader
     if opt.dataset == 'cifar100':
-        if opt.distill in ['crd']:
+        if opt.distill in ['crd', 'crd_sw']:
             train_loader, val_loader, n_data = get_cifar100_dataloaders_sample(batch_size=opt.batch_size,
                                                                                num_workers=opt.num_workers,
                                                                                k=opt.nce_k,
@@ -188,6 +193,15 @@ def main():
         opt.t_dim = feat_t[-1].shape[1]
         opt.n_data = n_data
         criterion_kd = CRDLoss(opt)
+        module_list.append(criterion_kd.embed_s)
+        module_list.append(criterion_kd.embed_t)
+        trainable_list.append(criterion_kd.embed_s)
+        trainable_list.append(criterion_kd.embed_t)
+    elif opt.distill == 'crd_sw':
+        opt.s_dim = feat_s[-1].shape[1]
+        opt.t_dim = feat_t[-1].shape[1]
+        opt.n_data = n_data
+        criterion_kd = SWCRDLoss(opt)
         module_list.append(criterion_kd.embed_s)
         module_list.append(criterion_kd.embed_t)
         trainable_list.append(criterion_kd.embed_s)
