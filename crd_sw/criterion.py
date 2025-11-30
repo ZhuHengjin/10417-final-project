@@ -72,6 +72,9 @@ class ContrastLoss(nn.Module):
 
         if w_neg is not None:
             # make sure shape matches [bsz, m]
+            # print("Applying semantic weights to negatives with shape:", w_neg.shape)
+            # print("Negative log probs shape:", log_D0.shape)
+            w_neg = w_neg.unsqueeze(-1)
             log_D0 = log_D0 * w_neg
 
         loss = - (log_D1.sum(0) + log_D0.view(-1, 1).sum(0)) / bsz
