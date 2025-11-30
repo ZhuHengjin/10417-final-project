@@ -85,7 +85,7 @@ def parse_option():
     parser.add_argument('--nce_k', default=16384, type=int, help='number of negative samples for NCE')
     parser.add_argument('--nce_t', default=0.07, type=float, help='temperature parameter for softmax')
     parser.add_argument('--nce_m', default=0.5, type=float, help='momentum for non-parametric updates')
-    parser.add_argument('--sw_alpha', type=float, default=0.0, help='semantic weight scale for SW-CRD negatives')
+    parser.add_argument('--sw_alpha', type=float, default=1.0, help='semantic weight scale for SW-CRD negatives')
     parser.add_argument('--sw_tau', type=float, default=None, help='temperature for semantic weighting; default uses nce_t')
 
     # hint layer
@@ -115,8 +115,8 @@ def parse_option():
 
     opt.model_t = get_teacher_name(opt.path_t)
 
-    opt.model_name = 'S:{}_T:{}_{}_{}_r:{}_a:{}_b:{}_{}'.format(opt.model_s, opt.model_t, opt.dataset, opt.distill,
-                                                                opt.gamma, opt.alpha, opt.beta, opt.trial)
+    opt.model_name = 'S:{}_T:{}_{}_{}_r:{}_a:{}_b:{}_sw:{}_{}'.format(opt.model_s, opt.model_t, opt.dataset, opt.distill,
+                                                                opt.gamma, opt.alpha, opt.beta, opt.sw_alpha, opt.trial)
 
     opt.tb_folder = os.path.join(opt.tb_path, opt.model_name)
     if not os.path.isdir(opt.tb_folder):

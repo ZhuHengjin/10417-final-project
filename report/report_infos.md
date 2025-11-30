@@ -14,9 +14,17 @@
     python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_r:1_a:0.0_b:0.8_1 --output report/logs/crd.csv
     ```
 
+    ```bash
+    python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:0.0_b:0.8_1 --output report/logs/crd_sw.csv
+    ```
+
 - plot training curves
     ```bash
     python3 report/plot_training_curves.py --csv report/logs/kd.csv report/logs/rkd.csv report/logs/crd.csv --out_dir report/graphs
+    ```
+
+    ```bash
+    python3 report/plot_training_curves.py --csv report/logs/kd.csv report/logs/crd_sw.csv report/logs/crd.csv --out_dir report/graphs
     ```
 
 - report best metrics
@@ -55,6 +63,15 @@ Results for report/logs/rkd.csv:
 - Test Top-5 Accuracy: 92.8900 at epoch 181
 
 Test accuracy imporved from kd: -0.01994878015905114
+
+---
+
+Results for report/logs/crd_sw.csv:
+- Training Loss: 10.6021 at epoch 130
+- Test Loss: 1.4170 at epoch 93
+- Training Accuracy: 71.0340 at epoch 128
+- Test Accuracy: 63.4900 at epoch 93
+- Test Top-5 Accuracy: 88.4100 at epoch 125
 
 ## Analysis of Results
 
