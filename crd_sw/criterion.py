@@ -27,6 +27,7 @@ class CRDLoss(nn.Module):
         sem_alpha = getattr(opt, 'sw_alpha', 0.0)
         print("CRD SW Loss with semantic alpha:", sem_alpha)
         sem_tau = getattr(opt, 'sw_tau', opt.nce_t)
+        print("CRD SW Loss with semantic tau:", sem_tau)
         self.contrast = ContrastMemory(opt.feat_dim, opt.n_data, opt.nce_k, opt.nce_t, opt.nce_m,
                                        semantic_alpha=sem_alpha, semantic_tau=sem_tau)
         self.criterion_t = ContrastLoss(opt.n_data)

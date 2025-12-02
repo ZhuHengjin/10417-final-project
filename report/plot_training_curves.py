@@ -31,6 +31,8 @@ def plot_metric(curves: List[pd.DataFrame], tag: str, ylabel: str, out_file: Pat
     plt.title(f"{ylabel} vs Epoch")
     plt.legend()
     plt.tight_layout()
+    # if tag == "test_acc":
+    #     plt.ylim(bottom=70)
     out_file.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_file)
     plt.close()

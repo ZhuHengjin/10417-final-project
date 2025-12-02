@@ -115,8 +115,10 @@ def parse_option():
 
     opt.model_t = get_teacher_name(opt.path_t)
 
-    opt.model_name = 'S:{}_T:{}_{}_{}_r:{}_a:{}_b:{}_sw:{}_{}'.format(opt.model_s, opt.model_t, opt.dataset, opt.distill,
-                                                                opt.gamma, opt.alpha, opt.beta, opt.sw_alpha, opt.trial)
+    opt.model_name = 'S:{}_T:{}_{}_{}_r:{}_a:{}_b:{}_sw:{}_tau:{}_{}'\
+        .format(opt.model_s, opt.model_t, opt.dataset, opt.distill,
+                opt.gamma, opt.alpha, opt.beta, opt.sw_alpha, 
+                getattr(opt, 'sw_tau', opt.nce_t), opt.trial)
 
     opt.tb_folder = os.path.join(opt.tb_path, opt.model_name)
     if not os.path.isdir(opt.tb_folder):
