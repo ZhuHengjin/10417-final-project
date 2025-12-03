@@ -23,7 +23,7 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
     ```
 
     ```bash
-    python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.35_1 --output report/logs/crd_sw:1.0_tau:0.35_1.csv
+    python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1.0_a:0.0_b:0.8_sw:1.0_tau:0.6_1 --output report/logs/crd_sw:1.0_tau:0.6_1.csv
     ```
 
 - plot training curves
@@ -38,7 +38,7 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
 - report best metrics
 
     ```bash
-    python3 report/report_best_metrics.py --csv report/logs/crd_sw:1.0_tau:0.35_1.csv
+    python3 report/report_best_metrics.py --csv report/logs/crd_sw:1.0_tau:0.6_1.csv
     ```
 
 ## Metric values
@@ -72,6 +72,34 @@ Results for `report/logs/crd.csv`:
 
 Test accuracy imporved from kd: 0.01873567866289258
 
+
+---
+
+Results for report/logs/crd_sw:1.0_tau:0.05_1.csv (alpha=1.0, tau=0.05):
+- Training Loss: 12.4528 at epoch 180
+- Test Loss: 0.8753 at epoch 187
+- Training Accuracy: 92.4600 at epoch 211
+- Test Accuracy: 75.5500 at epoch 188
+- Test Top-5 Accuracy: 94.1900 at epoch 203
+
+---
+
+Results for report/logs/crd_sw:1.0_1.csv (alpha=1.0, tau=0.07):
+- Training Loss: 7.9158 at epoch 180
+- Test Loss: 0.8671 at epoch 182
+- Training Accuracy: 92.7960 at epoch 228
+- Test Accuracy: 75.8800 at epoch 193
+- Test Top-5 Accuracy: 94.1100 at epoch 183
+
+---
+
+Results for report/logs/crd_sw:1.0_tau:0.35_1.csv (alpha=1.0, tau=0.35):
+- Training Loss: 4.1231 at epoch 211
+- Test Loss: 0.8691 at epoch 221
+- Training Accuracy: 92.6100 at epoch 231
+- Test Accuracy: 75.8300 at epoch 191
+- Test Top-5 Accuracy: 94.1200 at epoch 236
+
 ---
 
 Results for report/logs/crd_sw:1.0_tau:0.5_1.csv (alpha=1.0, tau=0.5):
@@ -83,12 +111,14 @@ Results for report/logs/crd_sw:1.0_tau:0.5_1.csv (alpha=1.0, tau=0.5):
 
 ---
 
-Results for report/logs/crd_sw:1.0_tau:0.35_1.csv (alpha=1.0, tau=0.35):
-- Training Loss: 4.1231 at epoch 211
-- Test Loss: 0.8691 at epoch 221
-- Training Accuracy: 92.6100 at epoch 231
-- Test Accuracy: 75.8300 at epoch 191
-- Test Top-5 Accuracy: 94.1200 at epoch 236
+Results for report/logs/crd_sw:1.0_tau:0.6_1.csv:
+- Training Loss: 4.1058 at epoch 212
+- Test Loss: 0.8626 at epoch 191
+- Training Accuracy: 92.2800 at epoch 232
+- Test Accuracy: 75.3400 at epoch 224
+- Test Top-5 Accuracy: 94.2300 at epoch 226
+
+
 
 ---
 
@@ -108,32 +138,6 @@ Results for report/logs/crd_sw:0.5_1.csv (alpha=0.5, tau=0.07):
 - Test Accuracy: 75.4800 at epoch 203
 - Test Top-5 Accuracy: 94.0700 at epoch 199
 
----
-
-Results for report/logs/crd_sw:1.0_1.csv (alpha=1.0, tau=0.07):
-- Training Loss: 7.9158 at epoch 180
-- Test Loss: 0.8671 at epoch 182
-- Training Accuracy: 92.7960 at epoch 228
-- Test Accuracy: 75.8800 at epoch 193
-- Test Top-5 Accuracy: 94.1100 at epoch 183
-
----
-
-Results for report/logs/crd_sw:1.0_None.csv (alpha=1.0, tau=0.07):
-- Training Loss: 8.4717 at epoch 180
-- Test Loss: 0.8704 at epoch 197
-- Training Accuracy: 92.6960 at epoch 218
-- Test Accuracy: 75.4700 at epoch 192
-- Test Top-5 Accuracy: 94.2000 at epoch 209
-
----
-
-Results for report/logs/crd_sw:1.0_tau:0.05_1.csv (alpha=1.0, tau=0.05):
-- Training Loss: 12.4528 at epoch 180
-- Test Loss: 0.8753 at epoch 187
-- Training Accuracy: 92.4600 at epoch 211
-- Test Accuracy: 75.5500 at epoch 188
-- Test Top-5 Accuracy: 94.1900 at epoch 203
 
 ## Analysis of Results
 
