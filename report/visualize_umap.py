@@ -8,6 +8,11 @@ Phase 2 (`mode=plot`): read a CSV with columns [x, y, label] and render the plot
 CLI examples:
 - Predict: 
 python3 ./report/visualize_umap.py --mode predict \
+  --ckpt save/models/resnet32x4_vanilla/ckpt_epoch_240.pth \
+  --model resnet32x4 --role student --csv-out report/umap_log/resnet32x4_vanilla.csv \
+  --classes 0,1,2,3,4,5,6,7,8,9
+
+python3 ./report/visualize_umap.py --mode predict \
   --ckpt save/student_model/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:1.0_b:0.8_sw:1.0_tau:0.5_1/ckpt_epoch_200.pth \
   --model resnet8x4 --role student --csv-out report/umap_log/crd_sw_1.0_0.5.csv \
   --classes 0,1,2,3,4,5,6,7,8,9
