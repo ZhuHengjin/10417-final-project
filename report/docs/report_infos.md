@@ -23,7 +23,7 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
     ```
 
     ```bash
-    python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.45_1 --output report/logs/crd_sw:1.0_tau:0.45_1.csv
+    python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:1.0_b:0.8_sw:1.0_tau:0.5_1 --output report/logs/crd_sw:1.0_tau:0.5_1_a1.csv
     ```
 
 - plot training curves
@@ -38,7 +38,7 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
 - report best metrics
 
     ```bash
-    python3 report/report_best_metrics.py --csv report/logs/crd_sw:1.0_tau:0.45_1.csv
+    python3 report/report_best_metrics.py --csv report/logs/crd_sw:1.0_tau:0.5_1_a1.csv
     ```
 
 ## Metric values
@@ -145,6 +145,14 @@ Results for report/logs/crd_sw:0.5_1.csv (alpha=0.5, tau=0.07):
 - Test Accuracy: 75.4800 at epoch 203
 - Test Top-5 Accuracy: 94.0700 at epoch 199
 
+---
+
+Results for report/logs/crd_sw:1.0_tau:0.5_1_a1.csv:
+- Training Loss: 5.7994 at epoch 211
+- Test Loss: 0.9527 at epoch 185
+- Training Accuracy: 93.9420 at epoch 237
+- Test Accuracy: 75.9900 at epoch 225
+- Test Top-5 Accuracy: 93.9400 at epoch 186
 
 ## Analysis of Results
 
