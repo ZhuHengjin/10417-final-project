@@ -243,12 +243,16 @@ def main():
         print("==> training...")
 
         time1 = time.time()
-        train_acc, train_loss = train(epoch, train_loader, module_list, criterion_list, optimizer, opt)
+        train_acc, train_loss, train_loss_cls, train_loss_div, train_loss_kd = train(
+            epoch, train_loader, module_list, criterion_list, optimizer, opt)
         time2 = time.time()
         print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
         logger.add_scalar('train_acc', train_acc, epoch)
         logger.add_scalar('train_loss', train_loss, epoch)
+        logger.add_scalar('train_loss_cls', train_loss_cls, epoch)
+        logger.add_scalar('train_loss_div', train_loss_div, epoch)
+        logger.add_scalar('train_loss_kd', train_loss_kd, epoch)
 
         test_acc, tect_acc_top5, test_loss = validate(val_loader, model_s, criterion_cls, opt)
 

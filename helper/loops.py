@@ -83,6 +83,9 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
+    loss_cls_meter = AverageMeter()
+    loss_div_meter = AverageMeter()
+    loss_kd_meter = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
 
@@ -126,8 +129,21 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
             loss_kd = criterion_kd(f_s, f_t)
         else:
             raise NotImplementedError(opt.distill)
-
+        
         loss = opt.gamma * loss_cls + opt.alpha * loss_div + opt.beta * loss_kd
+
+        # keep track of each weighted component's contribution to the total loss
+        loss_cls_contrib = (opt.gamma * loss_cls).item()
+        loss_div_contrib = (opt.alpha * loss_div).item()
+        if isinstance(loss_kd, torch.Tensor):
+            loss_kd_value = loss_kd.item()
+        else:
+            loss_kd_value = float(loss_kd)
+        loss_kd_contrib = opt.beta * loss_kd_value
+
+        loss_cls_meter.update(loss_cls_contrib, input.size(0))
+        loss_div_meter.update(loss_div_contrib, input.size(0))
+        loss_kd_meter.update(loss_kd_contrib, input.size(0))
 
         acc1, acc5 = accuracy(logit_s, target, topk=(1, 5))
         losses.update(loss.item(), input.size(0))
@@ -149,16 +165,25 @@ def train_distill(epoch, train_loader, module_list, criterion_list, optimizer, o
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                  'Loss_cls {loss_cls.val:.4f} ({loss_cls.avg:.4f})\t'
+                  'Loss_div {loss_div.val:.4f} ({loss_div.avg:.4f})\t'
+                  'Loss_kd {loss_kd.val:.4f} ({loss_kd.avg:.4f})\t'
                   'Acc@1 {top1.val:.3f} ({top1.avg:.3f})\t'
                   'Acc@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                 epoch, idx, len(train_loader), batch_time=batch_time,
-                data_time=data_time, loss=losses, top1=top1, top5=top5))
+                data_time=data_time, loss=losses,
+                loss_cls=loss_cls_meter, loss_div=loss_div_meter, loss_kd=loss_kd_meter,
+                top1=top1, top5=top5))
             sys.stdout.flush()
 
-    print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
-          .format(top1=top1, top5=top5))
+    print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f} '
+          'Loss_cls {loss_cls:.4f} Loss_div {loss_div:.4f} Loss_kd {loss_kd:.4f}'
+          .format(top1=top1, top5=top5,
+                  loss_cls=loss_cls_meter.avg,
+                  loss_div=loss_div_meter.avg,
+                  loss_kd=loss_kd_meter.avg))
 
-    return top1.avg, losses.avg
+    return top1.avg, losses.avg, loss_cls_meter.avg, loss_div_meter.avg, loss_kd_meter.avg
 
 
 def validate(val_loader, model, criterion, opt):

@@ -1,7 +1,7 @@
 ## CLI commands
 
 ```
-python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240.pth --distill crd_sw --model_s resnet8x4 -a 0 -b 0.8 --trial 1 --sw_alpha 1 --sw_tau 0.45
+python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240.pth --distill crd_sw --model_s resnet8x4 -a 1 -b 0.8 --trial 1 --sw_alpha 1 --sw_tau 0.5
 ```
 
 - Extract csv from the `logs` folder
@@ -120,7 +120,7 @@ Results for report/logs/crd_sw:1.0_tau:0.5_1.csv (alpha=1.0, tau=0.5):
 
 ---
 
-Results for report/logs/crd_sw:1.0_tau:0.6_1.csv:
+Results for report/logs/crd_sw:1.0_tau:0.6_1.csv (alpha=1.0, tau=0.6):
 - Training Loss: 4.1058 at epoch 212
 - Test Loss: 0.8626 at epoch 191
 - Training Accuracy: 92.2800 at epoch 232
