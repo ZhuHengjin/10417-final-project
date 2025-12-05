@@ -17,7 +17,9 @@ python3 ./report/visualize_umap.py --mode predict \
   --model resnet8x4 --role student --csv-out report/umap_log/crd_sw_1.0_0.5.csv \
   --classes 0,1,2,3,4,5,6,7,8,9
 
-- Plot (with optional rotation): python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap.png --rotate-deg 30
+- Plot (with optional rotation): python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap_-60.png --rotate-deg -60
+
+python3 report/visualize_umap.py --mode plot --csv report/umap_log/resnet32x4_vanilla.csv --out report/graphs/resnet32x4_vanilla_umap.png
 """
 
 import argparse
