@@ -6,7 +6,10 @@ the 2D embedding plus labels to CSV (no plot).
 Phase 2 (`mode=plot`): read a CSV with columns [x, y, label] and render the plot.
 
 CLI examples:
-- Predict: python report/visualize_umap.py --mode predict --ckpt <path> --model resnet32x4 --role student --csv-out tmp.csv
+- Predict: python3 report/visualize_umap.py --mode predict \
+  --ckpt save/student_model/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:1.0_b:0.8_sw:1.0_tau:0.5_1/ckpt_epoch_200.pth \
+  --model resnet8x4 --role student --csv-out crd_sw_1.0_0.5.csv
+
 - Plot (with optional rotation): python report/visualize_umap.py --mode plot --csv tmp.csv --out umap.png --rotate-deg 30
 """
 
@@ -14,7 +17,7 @@ import argparse
 import csv
 import os
 import sys
-from typing import Tuple
+from typing import Optional, Set, Tuple
 
 import matplotlib
 import numpy as np
@@ -94,9 +97,10 @@ def collect_features(
     device: str,
     max_samples: int,
     seed: int,
-    allowed_classes: set | None,
+    allowed_classes: Optional[Set[int]],
 ) -> Tuple[np.ndarray, np.ndarray]:
-    rng = torch.Generator(device=device)
+    # torch.randperm only supports CPU generators, so always keep this one on CPU.
+    rng = torch.Generator(device="cpu")
     rng.manual_seed(seed)
 
     features = []
