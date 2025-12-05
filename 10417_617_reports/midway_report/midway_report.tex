@@ -1,0 +1,237 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2024
+
+
+% ready for submission
+% \usepackage{neurips_2024}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+\usepackage[preprint]{neurips_2024}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{neurips_2024}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2024}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{amsmath}
+
+
+\title{Baseline for Semantic-Aware Weighting of Relational Pairs in Knowledge Distillation\\
+{\small \textit{Midway Report}}}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{
+  Hengjin Zhu\\
+  School of Computer Science\\
+  Carnegie Mellon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hengjinz@andrew.cmu.edu} \\
+  \And
+  Nachuan Zhao\\
+  School of Computer Science\\
+  Carnegie Mellon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{nzhao@andrew.cmu.edu} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+% \begin{abstract}
+%   The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
+%   both the left- and right-hand margins. Use 10~point type, with a vertical
+%   spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
+%   bold, and in point size 12. Two line spaces precede the abstract. The abstract
+%   must be limited to one paragraph.
+% \end{abstract}
+
+\section{Introduction}
+Knowledge distillation has emerged as an effective strategy for transferring information from a large, well-trained teacher network to a smaller student network, boosting the performance of small models. Traditional distillation methods, such as logit-based training, primarily focus on matching output distributions but  overlook information on structural relationships of feature representations. 
+
+In this project, we examine representative distillation approaches that extend beyond logit learning to encourage the student to reproduce the teacher’s feature embeddings. Specifically, we evaluate the performance of Relational Knowledge Distillation (RKD) and Contrastive Representation Distillation (CRD) on the CIFAR-100 dataset, an image classification benchmark on 100 object classes. These baselines establish the foundation upon which our proposed semantic-aware relational contrastive learning framework will be developed.
+
+
+\section{Literature Review}
+% NC
+Knowledge distillation, introduced by \citet{hinton2015distilling}, transfers knowledge from a large teacher network to a smaller student network by encouraging the student to match the teacher’s soft output probabilities, which has been widely used to boost the performance of smaller models. Building on this idea, Contrastive Representation Distillation (CRD) \citep{crd_tian2022contrastiverepresentationdistillation} aligns student and teacher embeddings via a contrastive loss, which allows the student to learn knowledge in the hidden states of the teacher, rather than learning only the output.  
+
+Boosting Contrastive Learning with Relation Knowledge Distillation (ReKD) \citep{RKDCL_zheng2021boostingcontrastivelearningrelation} enhanced the CRD by modeling pairwise relationships between features in the teacher’s representation space, transferring structural knowledge to the student. However, it treats all relations equally and does not account for the relevance of relations. 
+
+To incorporate semantics, Generating and Weighting Semantically Consistent Sample Pairs for Ultrasound Contrastive Learning \citep{semantic_chen2022generatingweightingsemanticallyconsistent} weights contrastive pairs based on semantic consistency, showing that emphasizing semantically meaningful pairs improves representation learning. 
+
+In this project, we wish to utilize the power of semantic information in the field of knowledge distillation and propose Semantic-Aware Relational Contrastive Distillation, which adds a semantic-based weight on top of ReKD.
+
+\section{Methods/Model}
+% NC
+% By the midway report, you are expected to have implemented a baseline (i.e., a standard deep learning approach to which you will compare your method). This is the meat of your report.
+% You should discuss your choice of architecture (with justification), your method of implementation, and any results attained. If relevant, discuss how you augmented/pre-processed the data. We recommend that you use concrete evaluation metrics to measure your model’s performance against what is in the literature (IoU, F1 score, Perplexity, etc.).
+For our baselines, we choose three knowledge distillation methods: Knowledge Distillation (KD) \citep{hinton2015distilling}, Relational Knowledge Distillation (RKD) \citep{rkd_park2019relational}, and Contrastive Representation Distillation (CRD) \citep{crd_tian2022contrastiverepresentationdistillation}. 
+These approaches serve as strong foundations for evaluating our proposed method, as they serve as the building elements of our proposed method.
+
+\subsection{Knowledge Distillation (KD)}
+Knowledge Distillation \citep{hinton2015distilling}, set the core framework for transferring knowledge from a large teacher model $T$ to a small student model $S$. 
+The total loss in KD is defined as a weighted combination of the cross-entropy loss and the Kullback--Leibler (KL) divergence between the output distributions of the teacher and student:
+$\mathcal{L}_{\text{KD}} = (1 - \alpha)\, \mathcal{L}_{\text{CE}}(y, p_S) + \alpha T^2 \, 
+\text{KL}(p_T \| p_S)$,
+where $\alpha$ is a hyperparameter that balances the two loss terms, and $p_T$ and $p_S$ denote teacher and student outputs. In our preliminary experiment, we use $\alpha = 0.9$.
+
+\subsection{Relational Knowledge Distillation (RKD)}
+Relational Knowledge Distillation (RKD) \citep{rkd_park2019relational} transfers relational information between pairwise data points 
+rather than absolute features. It matches the pairwise distances and angles among embeddings:
+$
+\mathcal{L}_{\text{RKD}} = \mathcal{L}_{\text{dist}} + \mathcal{L}_{\text{angle}},
+$
+% where
+% \begin{align}
+% \mathcal{L}_{\text{dist}} &= \sum_{i<j} \left( d_S(x_i, x_j) - d_T(x_i, x_j) \right)^2, \\
+% \mathcal{L}_{\text{angle}} &= \sum_{i,j,k} \left( a_S(x_i, x_j, x_k) - a_T(x_i, x_j, x_k) \right)^2.
+% \end{align}
+% Here $d(\cdot,\cdot)$ measures pairwise Euclidean distance and $a(\cdot,\cdot,\cdot)$ computes the cosine angle formed by three embeddings. 
+% By preserving these relations, the student learns to reconstruct the geometric structure of the teacher’s feature space.
+In our experiment, the total loss is a sum of $\mathcal{L}_{CE} + \mathcal{L}_{RKD}$.
+
+\subsection{Contrastive Representation Distillation (CRD)}
+This serves as our primary baseline, providing a foundation upon which our proposed semantic-aware approach will be built. Instead of matching logits, Contrastive Representation Distillation (CRD) \citep{crd_tian2022contrastiverepresentationdistillation} encourages alignment between the student and teacher feature embeddings 
+using a contrastive objective:
+$
+\mathcal{L}_{\text{CRD}} = - \log 
+\frac{\exp(f_t^\top f_s / T)}{\sum_{i=1}^{N} \exp(f_t^\top f_{s,i} / T)},
+$
+where $f_t$ and $f_s$ are the teacher and student features for a positive pair, 
+$f_{s,i}$ are negative samples from other instances, and $T$ is a temperature parameter. 
+In our experiment, the total loss is a weighted sum of $\mathcal{L}_{CE} + 0.8\mathcal{L}_{CRD}$.\\
+By aligning intermediate representations through a contrastive objective, it encourages the student to learn  embeddings that preserve the structure of the teacher's output. This property makes CRD an ideal starting point for extending toward semantic-aware relational contrastive learning, as it already emphasizes the relationships between samples, which can then be further refined by semantic weighting.
+
+\subsection{Implementation and Results}
+All baseline models were implemented using the RepDistiller framework\footnote{\url{https://github.com/HobbitLong/RepDistiller}}
+, which provides reference implementations for various knowledge distillation methods. We used the released codebase as a foundation and adapted it to our experimental setting. In our preliminary experiment, we used a ResNet-110 teacher and trained ResNet-32 students on the CIFAR-100 dataset for 240 epochs. 
+
+
+
+
+
+\section{Preliminary Results}
+% HZ
+% Showcase your experimental results. Include visualisations, tables, or even generated results if possible. Aside from any other relevant graphs and figures, we recommend you select an appropriate measure of accuracy and loss and plot graphs for those.
+
+We report training loss, test loss, training accuracy, and test accuracy curves for KD, RKD, and CRD over 240 epochs on CIFAR-100, along with final performance metrics. As shown in Figure~\ref{fig:kd-curves}, all methods converge successfully with visible improvements after the scheduled learning-rate decay steps at epochs 150, 180, and 210. CRD achieves the lowest final training and test losses and the highest accuracy, while RKD converges similarly in training accuracy but reaches a lower test accuracy. Table~\ref{tab:kd-results} summarizes the final results, confirming that CRD outperforms the KD baseline while RKD underperforms.
+
+% \subsection{Training and Evaluation Curves}
+
+\begin{figure}[H]
+\centering
+
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{midway_report/graphs/training_loss_vs_epoch.png}
+    \caption{Training loss v.s. epoch}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{midway_report/graphs/test_loss_vs_epoch.png}
+    \caption{Test loss v.s. epoch}
+\end{subfigure}
+
+\vspace{0.4cm}
+
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{midway_report/graphs/training_accuracy_vs_epoch.png}
+    \caption{Training accuracy v.s. epoch}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{midway_report/graphs/test_accuracy_vs_epoch.png}
+    \caption{Test accuracy v.s. epoch}
+\end{subfigure}
+
+\caption{Training and evaluation curves for KD, RKD, and CRD on CIFAR-100 over 240 epochs.}
+\label{fig:kd-curves}
+\end{figure}
+
+% \subsection{Tables}
+
+\begin{table}[H]
+  \caption{Comparison of KD, RKD, and CRD on CIFAR-100}
+  \label{tab:kd-results}
+  \centering
+  \begin{tabular}{lccccc}
+    \toprule
+    Method & Test Acc. (\%) & Top-5 Acc. (\%) & Test Loss & $\Delta$ Acc. (\%) & Summary \\
+    \midrule
+    KD  & 74.19 & 93.41 & 1.08 & --     & baseline \\
+    RKD & 72.71 & 92.89 & 0.99 & -1.49  & underperforms KD \\
+    CRD & 75.58 & 94.02 & 0.86 & +1.39  & best performance \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Evaluation of Preliminary Results}
+% HZ
+% Evaluate your baseline method and any other algorithms that you have tried on your specified dataset. In your explanation, detail what you hoped to have seen and hypothesize why you maybe didn't. Why was successful and what wasn't?
+
+We evaluated three knowledge-distillation strategies on CIFAR-100: the vanilla Knowledge Distillation baseline (KD), Relational Knowledge Distillation (RKD), and Contrastive Representation Distillation (CRD). We expected CRD to outperform KD due to its stronger contrastive objective, and anticipated RKD to provide moderate improvements by leveraging relational structure between samples.
+
+The experimental results largely align with these expectations. CRD achieves the highest test accuracy (75.58\%) and top-5 accuracy (94.02\%), outperforming KD by +1.39\% in top-1 accuracy while also attaining the lowest test loss. This improvement is reflected in the training dynamics: CRD shows consistently lower test loss and stronger generalization signals after the scheduled learning-rate decay phases, suggesting more discriminative feature representations. KD performs competitively, serving as a strong baseline with stable convergence behavior and solid accuracy (74.19\%). 
+
+In contrast, RKD did not fully meet our expectations. Although it has lower training loss than KD and even achieving a similar training accuracy level to CRD, its performance deteriorates noticeably on the test set. Despite appearing to learn effectively during training, RKD suffers a -1.49\% drop in top-1 accuracy compared to KD and exhibits a higher test loss, indicating weaker generalization. This suggests that RKD's pairwise relational constraints, though beneficial for capturing local sample structure, may not provide sufficiently rich or globally consistent supervisory signals to guide the student toward transferable feature representations. These data and findings align with prior literature. \citep{crd_tian2022contrastiverepresentationdistillation}
+
+In conclusion, our experiment shows that CRD improves student accuracy and stability, whereas RKD struggles to generalize despite strong training performance. This suggests that contrastive supervision provides a more transferable signal in this setting, while relational constraints may require further tuning to be effective.
+
+
+\section{Future Work}
+% NC
+Currently, relational distillation methods treat all sample pairs equally. In practice, not all relations are equally important: some pairs carry meaningful signals (e.g., samples from the same class or with similar visual attributes), while others may be noisy or uninformative. Motivated by this, our future work will explore Semantic-Aware Relational Contrastive Distillation, which incorporates a weighting mechanism into the relational loss to emphasize meaningful teacher–student relationships and ignore less informative or noisy pairs (e.g., samples from different class). By guiding the student to focus on more relevant relations, we aim to preserve the important teacher’s structural knowledge and thus to improve feature representation quality.
+
+% \section{References and Citations}
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+
+\section{Appendix}
+
+\subsection{Timeline and Division of Labor}
+
+We began the project on 10/12 by selecting our topic on contrastive learning and knowledge distillation. In our 10/15 TA meeting, we were advised to conduct a literature review and refine our research direction. By the 10/26 check-in, we completed the literature review and selected our baseline implementation (RepDistiller) as well as our extension idea incorporating semantic awareness into contrastive distillation. Between 11/1-11/2, we jointly set up the environment, reviewed the full pipeline, and successfully ran the baseline code. On 11/3, we finalized our midway report components based on our baseline results.
+
+Work has been shared throughout the process. Both Henry and Nachuan jointly configured AWS and executed the baseline experiments. Henry focused on producing preliminary results and evaluation for the midway report. Nachuan led the literature review and wrote the literature review and future-work sections. We anticipate continuing a balanced collaboration, with both members contributing to model implementation, experimentation, and writing, and dividing responsibilities based on expertise as the project progresses.
+
+\end{document}

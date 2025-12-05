@@ -1,0 +1,289 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2024
+
+
+% ready for submission
+% \usepackage{neurips_2024}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+% \usepackage[preprint]{neurips_2024}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final]{neurips_2024}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2024}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+
+\title{Sematic Weighted Contrastive Representation Distillation: Hard-Negative Modulation\\
+{\small \textit{Final Report}}}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{
+  Hengjin Zhu\\
+  School of Computer Science\\
+  Carnegie Mellon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hengjinz@andrew.cmu.edu} \\
+  \And
+  Nachuan Zhao\\
+  School of Computer Science\\
+  Carnegie Mellon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{nzhao@andrew.cmu.edu} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+  The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
+  both the left- and right-hand margins. Use 10~point type, with a vertical
+  spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
+  bold, and in point size 12. Two line spaces precede the abstract. The abstract
+  must be limited to one paragraph.
+\end{abstract}
+
+\section{Introduction}
+%Nachuan
+Knowledge distillation has emerged as an effective strategy for transferring information from a large, well-trained teacher network to a smaller student network, boosting the performance of small models. Traditional distillation methods, such as logit-based training, primarily focus on matching output distributions but  overlook information on structural relationships of feature representations. 
+
+% In this project, we examine representative distillation approaches that extend beyond logit learning to encourage the student to reproduce the teacher’s feature embeddings. Specifically, we evaluate the performance of Relational Knowledge Distillation (RKD) and Contrastive Representation Distillation (CRD) on the CIFAR-100 dataset, an image classification benchmark on 100 object classes. These baselines establish the foundation upon which our proposed semantic-aware relational contrastive learning framework will be developed.
+
+\section{Related Work}
+%Nachuan
+
+\section{Methods}
+
+\subsection{Semantic Weighted Loss}
+
+In CRD, the distillation objective is formulated as a lower bound of the mutual information (MI) between teacher and student representations. For a parametric critic function $h(T,S)$, the original contrastive loss is
+\begin{equation}
+    \mathcal{L}_{\text{critic}}(h) =
+    \mathbb{E}_{q(T,S|C=1)}[\log h(T,S)]
+    +
+    N,\mathbb{E}_{q(T,S|C=0)}[\log(1 - h(T,S))],
+\end{equation}
+where $q(T,S|C=1)$ denote the joint distribution and $q(T,S|C=0)$ denote the product-of-marginals distributions for positive and negative pairs, respectively. All negative pairs are treated as identically distributed background samples.
+
+However, the teacher representation typically exhibits non-uniform geometric structure, where negative samples vary substantially in semantic proximity to the anchor. Uniform negative sampling therefore leads to suboptimal MI estimation because the critic allocates equal weight to both informative (nearby) and trivial (far-apart) negatives.
+
+Intuitively, negatives that are more semantically similar to the anchor (as measured by the teacher’s embeddings) should exert a stronger influence on the loss, encouraging the student to learn finer-grained distinctions. Conversely, dissimilar negatives can be down-weighted since they are less informative.
+
+To incorporate this structural information, we introduce a *semantic-weighted critic* in which the contribution of each negative pair is modulated by a teacher-defined weight, over negative samples in the same domain $w(T,S) : \mathcal{T} \times \mathcal{S} \rightarrow \mathbb{R}_{>0}$. We define it using teacher features:
+\begin{equation}
+w(T,S)
+=
+1 + \alpha \exp \left( \frac{\cos(f_t(x_T), f_t(x_S))}{\tau} \right).
+\label{def:semantic-weights}
+\end{equation}
+
+Here $x_T$ and $x_S$ are the underlying samples that produced $T$ and $S$. Also $\alpha$ controls the strength of semantic modulation and $\tau$ is a temperature that adjusts sensitivity to similarity. This weight increases for teacher-near negative samples and smoothly decays for distant ones. The modified contrastive objective becomes
+\begin{equation}
+\mathcal{L}_{\text{SW-CRD}}(h)
+=
+\mathbb{E}_{q(T,S|C=1)}[\log h(T,S)]
++
+N \cdot \mathbb{E}_{q(T,S|C=0)}\big[
+w(T, S) \cdot \log(1 - h(T,S))
+\big].
+\end{equation}
+
+Although we introduce a semantic weighting term $w(T,S)$ to modulate the negative sampling distribution, we show in Appendix A that the resulting objective $\mathcal{L}_{\text{SW-CRD}}$ remains a valid variational lower bound on $I(T;S)$. The weighting simply rescales the implicit negative distribution, tightening the bound in regions where discrimination is most challenging.
+
+Although we introduce a semantic weighting term $w(T,S)$ to modulate the negative sampling distribution, we show in Appendix~\ref{app:mi-lower-bound} (Proposition~\ref{prop:mi-lower-bound}) that the resulting objective $\mathcal{L}_{\text{SW-CRD}}$ remains a valid variational lower bound on $I(T;S)$.
+
+Intuitively, standard CRD treats all negatives as equally informative despite strong geometric structure in teacher embeddings. Our weight $w(T,S)$ increases the contribution of semantically close negatives, concentrating probability mass on “hard” regions of the teacher manifold. This reweighted negative distribution shifts the MI lower bound by a constant $C = \log N + \mathbb{E}_{pos}[\log w]$, forcing the student to learn fine-grained distinctions ignored by uniform sampling.
+
+
+\subsubsection{Memory Buffer Implementation for the Semantic Weights}
+We inherit the contrastive memory buffer architecture of CRD \citep{crd_tian2022crd} and keep the same large-$N$ regime enabled by a memory bank. Concretely, our $\texttt{ContrastMemory}$ module maintains two buffers for student and teacher features $(\texttt{memory\_v1}, \texttt{memory\_v2})$ and uses an alias sampler to draw $K$ negatives plus one positive per anchor, exactly as in the original implementation.
+
+On top of this, we compute semantic weights $w(T,S)$ by reusing the teacher buffer: for each teacher anchor we retrieve the corresponding teacher negatives from $\texttt{memory\_v2}$, form their cosine similarities, and transform them with the $\alpha,\tau$ parameterization in Eq.~\ref{def:semantic-weights} to obtain per-negative weights.
+
+Since these weights are computed only on the sampled memory entries and share the same batched matrix-vector operations as the original score computation, our semantic-weighted loss adds almost no extra computational or memory cost while fully preserving the benefit of a large implicit negative set.
+
+
+\subsection{Knowledge Distillation Objective}
+
+Knowledge Distillation \citep{hinton2015distilling}, set the core framework for transferring knowledge from a large teacher model $T$ to a small student model $S$. 
+The total loss in KD is defined as a weighted combination of the cross-entropy loss and the Kullback--Leibler (KL) divergence between the output distributions of the teacher and student:
+\begin{equation}
+    \mathcal{L}_{\text{KD}} = (1 - \alpha)\, \mathcal{L}_{\text{CE}}(y, p_S) + \alpha T^2 \, \text{KL}(p_T \| p_S)
+\end{equation}
+where $\alpha$ is a hyperparameter that balances the two loss terms, and $p_T$ and $p_S$ denote teacher and student outputs.
+
+\subsection{Ensemble Distillation Loss}
+
+In the \texttt{crd\_sw} configuration, training uses a single-teacher objective per batch. The student is supervised by three terms: (i) a cross-entropy loss between student logits and ground-truth labels, $\mathcal{L}_{\text{CE}}(S,y)$; (ii) a logit-based distillation loss $\mathcal{L}_{\text{KD}}(S,T; \tau_{\text{kd}})$ implemented as a KL divergence at temperature $\tau_{\text{kd}}$; and (iii) a semantic-weighted CRD loss $\mathcal{L}_{\text{SW-CRD}}(S,T)$ computed between the last-layer features of the teacher and student. The total objective is
+\begin{equation}
+  \mathcal{L}_{\text{total}}
+  =
+  \gamma\,\mathcal{L}_{\text{CE}}(S,y)
+  +
+  \alpha\,\mathcal{L}_{\text{KD}}(S,T; T_{\text{kd}})
+  +
+  \beta\,\mathcal{L}_{\text{SW-CRD}}(S,T).
+\end{equation}
+
+During the main experiments, we set $\alpha = 0$, effectively removing the logit-based KD term. This allows us to focus on feature-based distillation via $\mathcal{L}_{\text{SW-CRD}}$ and isolate the contribution of our semantic-weighted contrastive objective.
+
+
+
+\section{Experiements}
+% Nachuan
+
+\section{Discussion and Analysis}
+% Nachuan
+
+\section{Conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+
+\section{Mutual Information Lower Bound for SW-CRD}
+\label{app:mi-lower-bound}
+
+For notational simplicity, we denote the joint distribution of positive pairs by $p(T,S)$ and the product of marginals (for negatives) by $p(T)p(S)$, corresponding to $q(T,S \mid C=1)$ and $q(T,S \mid C=0)$ in the main text.
+
+\subsection{Optimal Semantic-Weighted Critic}
+
+\begin{proposition}
+  \label{prop:optimal-critic}
+  The optimal critic function $h^*(T,S)$ that maximizes the semantic-weighted objective $\mathcal{L}_{\text{SW-CRD}}$ is given by:
+  $$
+  h^*(T,S) = \frac{p(T,S)}{p(T,S) +  N \cdot w(T,S) \cdot p(T)p(S)}
+  $$
+\end{proposition}
+
+\begin{proof}
+    The semantic-weighted objective function is defined as:
+    \begin{equation}
+        \mathcal{L}(h) = \mathbb{E}_{p(T,S)}[\log h(T,S)] + N \cdot \mathbb{E}_{p(T)p(S)}\big[ w(T,S) \cdot \log(1 - h(T,S)) \big]
+    \end{equation}
+    We can express the expectations as integrals over the domains of $T$ and $S$:
+    \begin{equation}
+        \mathcal{L}(h) = \iint \Big( p(T,S) \log h(T,S) + N \cdot w(T,S) p(T)p(S) \log(1 - h(T,S)) \Big) \, dT \, dS
+    \end{equation}
+    To maximize the functional $\mathcal{L}(h)$ with respect to the function $h$, it is sufficient to maximize the integrand pointwise for every pair $(T,S)$. Let $y = h(T,S)$ be the value of the critic at a specific pair. We define the scalar objective function $J(y)$ for this fixed pair as:
+    \begin{equation}
+        J(y) = A \cdot \log(y) + B \cdot \log(1 - y)
+    \end{equation}
+    where the coefficients $A$ and $B$ are non-negative constants specific to the pair $(T,S)$:
+    \begin{equation}
+        A = p(T,S), \quad B = N \cdot w(T,S) \cdot p(T)p(S)
+    \end{equation}
+    To find the optimal value $y^*$, we take the derivative of $J(y)$ with respect to $y$ and set it to zero:
+    \begin{equation}
+        \frac{dJ}{dy} = \frac{A}{y} - \frac{B}{1 - y} = 0
+    \end{equation}
+    Solving for $y$:
+    \begin{equation}
+    \frac{A}{y} = \frac{B}{1 - y} 
+    \implies
+    y = \frac{A}{A + B}
+    \end{equation}
+    We substitute the definitions of $A$ and $B$ back into the expression for $y$:
+    \begin{equation}
+    h^*(T,S) = \frac{p(T,S)}{p(T,S) + N \cdot w(T,S) \cdot p(T)p(S)}
+    \end{equation}
+    To confirm this is a maximum, we observe the second derivative:
+    \begin{equation}
+    \frac{d^2J}{dy^2} = -\frac{A}{y^2} - \frac{B}{(1-y)^2}
+    \end{equation}
+    Since $A, B \ge 0$ and $y \in (0,1)$, the second derivative is strictly negative, confirming that $h^*(T,S)$ is the global maximum.
+\end{proof}
+
+\subsection{Mutual Information Lower Bound}
+
+\begin{proposition}
+    \label{prop:mi-lower-bound}
+    Maximizing the semantic-weighted critic objective $\mathcal{L}_{\text{SW-CRD}}(h)$ with respect to the student encoder $f_S$ maximizes a lower bound on the mutual information $I(T;S)$ between teacher and student representations.
+\end{proposition}
+
+\begin{proof}
+    Let $p(T,S)$ denote the joint distribution and $p(T)p(S)$ the product of marginals. The objective is:
+    \begin{equation}
+        \mathcal{L}_{\text{SW-CRD}}(h) = \mathbb{E}_{p(T,S)}[\log h(T,S)] + N \mathbb{E}_{p(T)p(S)}[w(T,S) \log(1 - h(T,S))].
+    \end{equation}
+    By pointwise maximization, the optimal critic $h^*$ for a fixed encoder is given by:
+    \begin{equation}
+        h^*(T,S) = \frac{p(T,S)}{p(T,S) + N w(T,S) p(T)p(S)}.
+    \end{equation}
+    We relate this optimal critic to the mutual information. Considering $\log h^*(T,S)$:
+    \begin{equation}
+        \log h^*(T,S) 
+        = \log \left( \frac{1}{1 + \frac{N w(T,S) p(T)p(S)}{p(T,S)}} \right) 
+        = - \log \left( 1 + \frac{N w(T,S) p(T)p(S)}{p(T,S)} \right).
+    \end{equation}
+    Using the inequality $-\log(1+x) \leq -\log(x)$ for $x>0$:
+    \begin{equation}
+        \log h^*(T,S) 
+        \leq \log \left( \frac{p(T,S)}{p(T)p(S)} \right) - \log(N) - \log w(T,S).
+    \end{equation}
+    Taking the expectation over the joint distribution $p(T,S)$:
+    \begin{equation}
+        \mathbb{E}_{p(T,S)}[\log h^*(T,S)] 
+        \leq \underbrace{\mathbb{E}_{p(T,S)} \left[ \log \frac{p(T,S)}{p(T)p(S)} \right]}_{I(T;S)} - \log N - \underbrace{\mathbb{E}_{p(T,S)}[\log w(T,S)]}_{K}.
+    \end{equation}
+    Rearranging for $I(T;S)$:
+    \begin{equation}
+        I(T;S) \geq \mathbb{E}_{p(T,S)}[\log h^*] + \log N + K.
+    \end{equation}
+    Since $\log(1-h^*) < 0$ and $w(T,S) \geq 0$, the term $N \mathbb{E}_{p(T)p(S)}[w \log(1-h^*)]$ is non-positive. Adding it to the RHS maintains the lower bound:
+    \begin{equation}
+        I(T;S) \geq \underbrace{\mathbb{E}_{p(T,S)}[\log h^*] + N \mathbb{E}_{p(T)p(S)}[w \log(1-h^*)]}_{\mathcal{L}_{\text{SW-CRD}}(h^*)} + \log N + K.
+    \end{equation}
+    Thus, $I(T;S) \geq \mathcal{L}_{\text{SW-CRD}} + C$, where $C$ is a constant independent of the student encoder.
+\end{proof}
+
+\section{Timeline and Division of Labor}
+
+\end{document}
