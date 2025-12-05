@@ -6,9 +6,11 @@ the 2D embedding plus labels to CSV (no plot).
 Phase 2 (`mode=plot`): read a CSV with columns [x, y, label] and render the plot.
 
 CLI examples:
-- Predict: python3 report/visualize_umap.py --mode predict \
+- Predict: 
+python3 ./report/visualize_umap.py --mode predict \
   --ckpt save/student_model/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:1.0_b:0.8_sw:1.0_tau:0.5_1/ckpt_epoch_200.pth \
-  --model resnet8x4 --role student --csv-out crd_sw_1.0_0.5.csv
+  --model resnet8x4 --role student --csv-out report/umap_log/crd_sw_1.0_0.5.csv \
+  --classes 0,1,2,3,4,5,6,7,8,9
 
 - Plot (with optional rotation): python report/visualize_umap.py --mode plot --csv tmp.csv --out umap.png --rotate-deg 30
 """
