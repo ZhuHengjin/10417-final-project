@@ -1,40 +1,47 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Tau values (x-axis)
+# Data
 taus = np.array([0.05, 0.07, 0.35, 0.45, 0.5, 0.6, 1.0])
-
-# Top-1 accuracy for each tau
 top1 = np.array([75.55, 75.88, 75.83, 75.87, 76.01, 75.34, 75.41])
-
-# Top-5 accuracy for each tau
 top5 = np.array([94.19, 94.11, 94.12, 94.44, 94.54, 94.23, 94.19])
 
-plt.figure(figsize=(7, 5))
-
-# Plot Top-1 (main focus)
-plt.plot(
-    taus, top1, 
-    marker='o', linewidth=2.5, markersize=7, 
-    label='Top-1 Accuracy',
-    color='tab:green'
+# Create broken axis figure
+fig, (ax_top, ax_bottom) = plt.subplots(
+    2, 1,
+    sharex=True,
+    figsize=(7, 5),
+    gridspec_kw={'height_ratios': [0.8, 1.1]}  # match data ranges
 )
 
-# Plot Top-5 (lighter, secondary)
-plt.plot(
-    taus, top5, 
-    marker='s', linewidth=1.5, markersize=6, 
-    label='Top-5 Accuracy',
-    color='lightgreen', linestyle='--'
-)
+# ======== Plot on both axes (so it looks like ONE dataset) ========
+ax_top.plot(taus, top5, marker='s', linestyle='--', color='lightgreen', linewidth=1.5)
+ax_bottom.plot(taus, top1, marker='o', color='tab:green', linewidth=2.5)
 
-# Labeling
-plt.xlabel(r'Temperature $\tau$', fontsize=13)
-plt.ylabel('Accuracy (%)', fontsize=13)
-plt.title('Effect of Temperature $\\tau$ on SW-CRD Performance', fontsize=14)
+# ======== Set y-axis ranges (keep middle blank) ========
+ax_top.set_ylim(93.9, 94.7)
+ax_bottom.set_ylim(75.2, 76.3)
 
-plt.grid(alpha=0.3)
-plt.legend(fontsize=12)
-plt.tight_layout()
+# ======== Remove spines & add diagonal breaks ========
+ax_top.spines['bottom'].set_visible(False)
+ax_bottom.spines['top'].set_visible(False)
+ax_top.tick_params(labelbottom=False)
 
+d = 0.5
+kwargs = dict(marker=[(-1,-d),(1,d)], markersize=12,
+              linestyle='none', color='k', mec='k', mew=1, clip_on=False)
+
+ax_top.plot([0,1],[0,0], transform=ax_top.transAxes, **kwargs)
+ax_bottom.plot([0,1],[1,1], transform=ax_bottom.transAxes, **kwargs)
+
+# ======== Labels ========
+fig.text(0.02, 0.5, 'Accuracy (%)', va='center', rotation='vertical', fontsize=13)
+ax_bottom.set_xlabel(r'Temperature $\tau$', fontsize=13)
+# fig.suptitle(r'Effect of Temperature $\tau$ on SW-CRD Performance', fontsize=14)
+
+ax_bottom.grid(alpha=0.3)
+ax_top.grid(alpha=0.3)
+
+plt.tight_layout(rect=[0.04, 0.0, 1, 0.95])
+plt.savefig('./graphs/tau_tuning_plot_broken.png', dpi=300)
 plt.show()
