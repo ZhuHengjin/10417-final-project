@@ -30,6 +30,8 @@ python3 ./report/visualize_umap.py --mode predict \
 - Plot (with optional rotation): 
 python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap_-60.png --rotate-deg -60 --name SW-CRD
 
+python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.05.csv --out report/graphs/crd_sw_1.0_0.05_umap_-60.png --rotate-deg -60 --name 'SW-CRD(tau=0.05)'
+
 python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd.csv --out report/graphs/crd_umap_-60.png --rotate-deg -60 --name CRD
 
 python3 report/visualize_umap.py --mode plot --csv report/umap_log/resnet32x4_vanilla.csv --out report/graphs/resnet32x4_vanilla_umap.png --name Teacher
