@@ -116,3 +116,10 @@ venv.bak/
 # mypy
 .mypy_cache/
 .DS_Store
+*.aux
+*.bbl
+*.blg
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
