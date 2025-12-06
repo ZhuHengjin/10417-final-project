@@ -159,6 +159,8 @@ On top of this, we compute semantic weights $w(T,S)$ by reusing the teacher buff
 
 Since these weights are computed only on the sampled memory entries and share the same batched matrix-vector operations as the original score computation, our semantic-weighted loss adds almost no extra computational or memory cost while fully preserving the benefit of a large implicit negative set.
 
+\textbf{Computational Overhead:} 
+
 
 \subsection{Knowledge Distillation Objective}
 
@@ -192,36 +194,80 @@ We conduct our experiments with the CIFAR-100 dataset, a widely used benchmark i
 
 In our preliminary experiment on vanilla Knowledge Distillation baseline (KD) and Relational Knowledge Distillation (RKD), we use the whole training set. For CRD, we use a customized dataset class based on CIFAR-100. In addition to loading images and labels, the dataset precomputes a set of negative indices (images from all other classes). For each training sample, the dataset contains, the image, its label, and also a list of sampled indices consisting of the image itself as a positive sample and $k$ negative examples. These sampled indices are used to construct contrastive pairs for losses. 
 
+\subsection{Implementation Detail}
+All experiments were done using the RepDistiller framework\footnote{\url{https://github.com/HobbitLong/RepDistiller}}
+, which provides reference implementations for various knowledge distillation methods. We used the released codebase as a foundation and adapted it to our experimental setting. In our experiment, we used a ResNet-110 teacher and trained ResNet-32 students on the CIFAR-100 dataset for 240 epochs. 
+
 \section{Results}
 
-\section{Discussion and Analysis}
-% Nachuan
-
-\subsection{Ablation Study and Hyper-Parameters}
+\subsection{Hyper-Parameters}
 
 \begin{figure}[H]
 \centering
 
 \begin{subfigure}[t]{0.49\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{../../report/graphs/tau_tuning_plot.png}
-    \caption{Training loss v.s. epoch}
+    \includegraphics[width=\textwidth]{../../report/graphs/N_tuning_plot_broken.png}
+    \caption{Effects of varying the number of negatives $N$}
+    \label{fig:N-tuning}
 \end{subfigure}
 \hfill
 \begin{subfigure}[t]{0.49\textwidth}
     \centering
     \includegraphics[width=\textwidth]{../../report/graphs/tau_tuning_plot_broken.png}
-    \caption{Effects of varying $\tau_{\text{SW}}$}
+    \caption{Effects of varying the sematic temperature $\tau_{\text{SW}}$}
     \label{fig:sematic-tau-tuning}
 \end{subfigure}
 
-\caption{Effects of varying (a) the number of negatives, shown in , or (b) the semantic wieghting temperature.}
+\caption{Effects of tuning hyperparameters}
 \label{fig:hyperparameter-tuning}
 \end{figure}
 
-\textbf{Temperature $\tau_{\text{SW}}$} We experimented with different temperature values $\tau_{\text{SW}}$ in the semantic weight function $w(T,S)$ (Eq.~\ref{def:semantic-weights}) from 0.05 to 1.
+\textbf{Number of Negatives $N$:}
+We evaluate SW-CRD with different numbers of sampled negatives $N \in \{64, 256, 1024, 4096, 16384\}$. As shown in Figure~\ref{fig:N-tuning}, both top-1 and top-5 accuracies generally improve as $N$ increases, confirming that a larger pool of negatives in the memory bank is beneficial. Compared with the CRD paper \citep{crd_tian2022crd}, where increasing $N$ from $4096$ to $16384$ yields less than a $0.1\%$ gain, our setting with the sematic weight is more sensitive in this regime: in our experiments, the improvement from $N = 4096$ to $N = 16384$ is around $0.3$ percentage points for both top-1 and top-5 accuracy. To exploit this additional benefit, we adopt $N = 16384$ negatives in all main experiments. ($N$ is referred to as $\texttt{nce\_k}$ in the codebase.)
 
-\subsection{UMAP Visualization}
+\textbf{Temperature $\tau_{\text{SW}}$:}
+In Figure~\ref{fig:sematic-tau-tuning}, both top-1 and top-5 accuracy attain their maximum at $\tau_{\text{SW}} = 0.5$. The top-1 curve is more sensitive to the temperature, showing a noticeable drop once $\tau_{\text{SW}}$ exceeds 0.5, whereas the top-5 accuracy remains relatively stable and varies only mildly across settings. The top-5 curve nevertheless forms a smooth hill, increasing as $\tau_{\text{SW}}$ approaches 0.5 and decreasing for larger or smaller values, indicating that very low or very high temperatures are slightly suboptimal. Based on this trend, we fix $\tau_{\text{SW}} = 0.5$ in all subsequent experiments.
+
+\section{Discussion and Analysis}
+% Nachuan
+
+\subsection{Ablation Study}
+
+\subsection{Uniform Manifold Approximation and Projection (UMAP) Feature Analysis}
+
+\begin{figure}[H]
+\centering
+
+\begin{subfigure}[t]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/crd_sw_1.0_0.5_umap_-60.png}
+    \caption{Features of SW-CRD }
+    \label{fig:UMAP-sw-0.5}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/crd_umap_-60.png}
+    \caption{Features of CRD}
+    \label{fig:UMAP-crd}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/resnet32x4_vanilla_umap.png}
+    \caption{Features of teacher}
+    \label{fig:UMAP-teacher}
+\end{subfigure}
+
+\caption{UMAP visualization of final layer features}
+\label{fig:UMAP}
+\end{figure}
+
+To qualitatively evaluate how contrastive distillation shapes the student’s representation space, we project the final-layer features of the teacher ($\texttt{resnet32x4\_vanilla}$), CRD student, and our SW-CRD student ($\tau_{\text{SW}}=0.5$) into 2-D using UMAP. This visualization allows us to compare the geometric structure induced by different training schemes.
+
+We observe in Figure~\ref{fig:UMAP} that the teacher’s representation space is much more cleanly separated, with each class forming a compact cluster. Both CRD and SW-CRD students broadly preserve this relative geometry, reflecting the effect of contrastive distillation. However, for semantically similar classes such as 3 vs. 4 (red vs. purple) and 6 vs. 7 (pink vs. gray), SW-CRD exhibits slightly wider separation while for CRD, clusters almost completely overlap with each other, indicating improved separation of hard class pairs.
+
 
 \section{Conclusion}
 

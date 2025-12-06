@@ -28,7 +28,7 @@ python3 ./report/visualize_umap.py --mode predict \
   --classes 0,1,2,3,4,5,6,7,8,9
 
 - Plot (with optional rotation): 
-python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap_-60.png --rotate-deg -60 --name SW-CRD
+python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap_-60.png --rotate-deg -60 --name "SW-CRD(tau=0.5)"
 
 python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.05.csv --out report/graphs/crd_sw_1.0_0.05_umap_-60.png --rotate-deg -60 --name 'SW-CRD(tau=0.05)'
 
