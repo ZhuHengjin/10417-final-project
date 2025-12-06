@@ -18,13 +18,21 @@ python3 ./report/visualize_umap.py --mode predict \
   --classes 0,1,2,3,4,5,6,7,8,9
 
 python3 ./report/visualize_umap.py --mode predict \
+  --ckpt save/student_model/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.5_1/resnet8x4_best.pth \ <-- change to the checkpoint with tau 0.05
+  --model resnet8x4 --role student --csv-out report/umap_log/crd_sw_1.0_0.05.csv \
+  --classes 0,1,2,3,4,5,6,7,8,9
+
+python3 ./report/visualize_umap.py --mode predict \
   --ckpt save/student_model/S:resnet8x4_T:resnet32x4_cifar100_crd_r:1_a:0.0_b:0.8_1/resnet8x4_best.pth \
   --model resnet8x4 --role student --csv-out report/umap_log/crd.csv \
   --classes 0,1,2,3,4,5,6,7,8,9
 
-- Plot (with optional rotation): python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap_-60.png --rotate-deg -60
+- Plot (with optional rotation): 
+python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd_sw_1.0_0.5.csv --out report/graphs/crd_sw_1.0_0.5_umap_-60.png --rotate-deg -60 --name SW-CRD
 
-python3 report/visualize_umap.py --mode plot --csv report/umap_log/resnet32x4_vanilla.csv --out report/graphs/resnet32x4_vanilla_umap.png
+python3 report/visualize_umap.py --mode plot --csv ./report/umap_log/crd.csv --out report/graphs/crd_umap_-60.png --rotate-deg -60 --name CRD
+
+python3 report/visualize_umap.py --mode plot --csv report/umap_log/resnet32x4_vanilla.csv --out report/graphs/resnet32x4_vanilla_umap.png --name Teacher
 """
 
 import argparse
@@ -79,6 +87,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--csv", help="Input CSV path for plot mode.")
     parser.add_argument("--out", default=None, help="Output path for the figure; defaults to umap_{role}.png")
     parser.add_argument("--rotate-deg", type=float, default=0.0, help="Rotation angle (degrees) applied in plot mode")
+    parser.add_argument("--name", type=str, default="embedding", help="Name used in output filename.")
     return parser.parse_args()
 
 
@@ -166,7 +175,7 @@ def run_umap(
     return reducer.fit_transform(features)
 
 
-def plot_embedding(embedding: np.ndarray, labels: np.ndarray, out_path: str, role: str) -> None:
+def plot_embedding(embedding: np.ndarray, labels: np.ndarray, out_path: str, role: str, name: str) -> None:
     plt.figure(figsize=(8, 8))
     scatter = plt.scatter(
         embedding[:, 0],
@@ -179,7 +188,7 @@ def plot_embedding(embedding: np.ndarray, labels: np.ndarray, out_path: str, rol
     )
     plt.xlabel("UMAP-1")
     plt.ylabel("UMAP-2")
-    plt.title(f"{role.capitalize()} features (final hidden state)")
+    plt.title(f"{name} features (final hidden state)")
     cbar = plt.colorbar(scatter, fraction=0.046, pad=0.04)
     cbar.set_label("Class")
     plt.tight_layout()
@@ -243,8 +252,8 @@ def main() -> None:
             theta = np.deg2rad(args.rotate_deg)
             rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
             emb = emb @ rot.T
-        out_path = args.out or f"umap_{args.role}.png"
-        plot_embedding(emb, labs, out_path, args.role)
+        out_path = args.out or f"umap_{args.name}.png"
+        plot_embedding(emb, labs, out_path, args.role, args.name)
 
 
 if __name__ == "__main__":

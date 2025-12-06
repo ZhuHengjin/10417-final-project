@@ -93,10 +93,21 @@
 %Nachuan
 Knowledge distillation has emerged as an effective strategy for transferring information from a large, well-trained teacher network to a smaller student network, boosting the performance of small models. Traditional distillation methods, such as logit-based training, primarily focus on matching output distributions but  overlook information on structural relationships of feature representations. 
 
-% In this project, we examine representative distillation approaches that extend beyond logit learning to encourage the student to reproduce the teacher’s feature embeddings. Specifically, we evaluate the performance of Relational Knowledge Distillation (RKD) and Contrastive Representation Distillation (CRD) on the CIFAR-100 dataset, an image classification benchmark on 100 object classes. These baselines establish the foundation upon which our proposed semantic-aware relational contrastive learning framework will be developed.
+Contrastive Representation Distillation (CRD) extends the idea of distilling knowledge beyond output logits by explicitly modeling relationships in the feature space. Instead of only encouraging the student to mimic the teacher’s predictions, CRD aligns the teacher’s hidden representations with that of the student. This is achieved through a contrastive objective that treats pairs of teacher–student features from the same image  as positive samples, while pairs drawn from different classes are treated as negatives. In other words, CRD encourages the student to be close to the teacher in representation space when their corresponding inputs share the same label, and to be pushed apart otherwise. This allows CRD to encode class-level structural relationships rather than relying solely on output logits.
+
+However, the original CRD formulation assumes all cross-class pairs are equally negative. This ignores the fact that samples from different classes may still exhibit nontrivial semantic correlations—for example,  visually similar objects (e.g., dolphin vs. whale). The standard contrastive loss pushes all negative pairs apart with equal force, regardless of whether the teacher’s hidden representations consider them mildly similar or fundamentally different.
+
+To address this limitation, we propose a semantic-weighted CRD (SW-CRD) approach that incorporates teacher-side semantic similarity directly into the contrastive loss. Instead of treating all negative pairs equally, we compute a similarity score between the teacher’s hidden states for each pair of inputs and use this score as a weight in the loss. Pairs that the teacher think to be more similar impose a stronger repulsive force, while dissimilar pairs impose a weaker one. This weighting scheme allows the student to capture not only the class-level structure but also the finer-grained relational geometry embedded in the teacher’s representation space.
 
 \section{Related Work}
 %Nachuan
+Knowledge distillation, introduced by \citet{hinton2015distilling}, transfers knowledge from a large teacher network to a smaller student network by encouraging the student to match the teacher’s soft output probabilities, which has been widely used to boost the performance of smaller models. Building on this idea, Contrastive Representation Distillation (CRD) \citep{crd_tian2022contrastiverepresentationdistillation} aligns student and teacher embeddings via a contrastive loss, which allows the student to learn knowledge in the hidden states of the teacher, rather than learning only the output.  
+
+Boosting Contrastive Learning with Relation Knowledge Distillation (ReKD) \citep{RKDCL_zheng2021boostingcontrastivelearningrelation} enhanced the CRD by modeling pairwise relationships between features in the teacher’s representation space, transferring structural knowledge to the student. However, it treats all relations equally and does not account for the relevance of relations. 
+
+To incorporate semantics, Generating and Weighting Semantically Consistent Sample Pairs for Ultrasound Contrastive Learning \citep{semantic_chen2022generatingweightingsemanticallyconsistent} weights contrastive pairs based on semantic consistency, showing that emphasizing semantically meaningful pairs improves representation learning. 
+
+In this project, we wish to utilize the power of semantic information in the field of knowledge distillation and propose Semantic-Aware Relational Contrastive Distillation, which adds a semantic-based weight on top of ReKD.
 
 \section{Methods}
 
@@ -119,11 +130,11 @@ To incorporate this structural information, we introduce a *semantic-weighted cr
 \begin{equation}
 w(T,S)
 =
-1 + \alpha \exp \left( \frac{\cos(f_t(x_T), f_t(x_S))}{\tau} \right).
+1 + \alpha_{\text{SW}} \exp \left( \frac{\cos(f_t(x_T), f_t(x_S))}{\tau_{\text{SW}}} \right).
 \label{def:semantic-weights}
 \end{equation}
 
-Here $x_T$ and $x_S$ are the underlying samples that produced $T$ and $S$. Also $\alpha$ controls the strength of semantic modulation and $\tau$ is a temperature that adjusts sensitivity to similarity. This weight increases for teacher-near negative samples and smoothly decays for distant ones. The modified contrastive objective becomes
+Here $x_T$ and $x_S$ are the underlying samples that produced $T$ and $S$. Also $\alpha_{\text{SW}}$ controls the strength of semantic modulation and $\tau_{\text{SW}}$ is a temperature that adjusts sensitivity to similarity. This weight increases for teacher-near negative samples and smoothly decays for distant ones. The modified contrastive objective becomes
 \begin{equation}
 \mathcal{L}_{\text{SW-CRD}}(h)
 =
@@ -174,12 +185,43 @@ In the \texttt{crd\_sw} configuration, training uses a single-teacher objective 
 During the main experiments, we set $\alpha = 0$, effectively removing the logit-based KD term. This allows us to focus on feature-based distillation via $\mathcal{L}_{\text{SW-CRD}}$ and isolate the contribution of our semantic-weighted contrastive objective.
 
 
-
-\section{Experiements}
+\section{Experiment Setup}
 % Nachuan
+\subsection{Dataset}
+We conduct our experiments with the CIFAR-100 dataset, a widely used benchmark in computer vision and representation learning. CIFAR-100 consists of 60,000 color images of size 32×32, split into 50,000 training images and 10,000 test images. Each image belongs to one of 100 fine-grained classes, such as apple, forest, oak tree, bus, or whale. The dataset also groups these 100 classes into 20 superclasses, though our experiments operate at the fine-class level.
+
+In our preliminary experiment on vanilla Knowledge Distillation baseline (KD) and Relational Knowledge Distillation (RKD), we use the whole training set. For CRD, we use a customized dataset class based on CIFAR-100. In addition to loading images and labels, the dataset precomputes a set of negative indices (images from all other classes). For each training sample, the dataset contains, the image, its label, and also a list of sampled indices consisting of the image itself as a positive sample and $k$ negative examples. These sampled indices are used to construct contrastive pairs for losses. 
+
+\section{Results}
 
 \section{Discussion and Analysis}
 % Nachuan
+
+\subsection{Ablation Study and Hyper-Parameters}
+
+\begin{figure}[H]
+\centering
+
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/tau_tuning_plot.png}
+    \caption{Training loss v.s. epoch}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/tau_tuning_plot_broken.png}
+    \caption{Effects of varying $\tau_{\text{SW}}$}
+    \label{fig:sematic-tau-tuning}
+\end{subfigure}
+
+\caption{Effects of varying (a) the number of negatives, shown in , or (b) the semantic wieghting temperature.}
+\label{fig:hyperparameter-tuning}
+\end{figure}
+
+\textbf{Temperature $\tau_{\text{SW}}$} We experimented with different temperature values $\tau_{\text{SW}}$ in the semantic weight function $w(T,S)$ (Eq.~\ref{def:semantic-weights}) from 0.05 to 1.
+
+\subsection{UMAP Visualization}
 
 \section{Conclusion}
 
@@ -199,7 +241,7 @@ For notational simplicity, we denote the joint distribution of positive pairs by
   \label{prop:optimal-critic}
   The optimal critic function $h^*(T,S)$ that maximizes the semantic-weighted objective $\mathcal{L}_{\text{SW-CRD}}$ is given by:
   $$
-  h^*(T,S) = \frac{p(T,S)}{p(T,S) +  N \cdot w(T,S) \cdot p(T)p(S)}
+  h^*(T,S) = \frac{p(T,S)}{p(T,S) + N \cdot w(T,S) \cdot p(T)p(S)}
   $$
 \end{proposition}
 
