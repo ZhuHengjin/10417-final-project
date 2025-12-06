@@ -182,6 +182,7 @@ In the \texttt{crd\_sw} configuration, training uses a single-teacher objective 
   \alpha\,\mathcal{L}_{\text{KD}}(S,T; T_{\text{kd}})
   +
   \beta\,\mathcal{L}_{\text{SW-CRD}}(S,T).
+  \label{eq:totla-loss}
 \end{equation}
 
 During the main experiments, we set $\alpha = 0$, effectively removing the logit-based KD term. This allows us to focus on feature-based distillation via $\mathcal{L}_{\text{SW-CRD}}$ and isolate the contribution of our semantic-weighted contrastive objective.
@@ -234,6 +235,17 @@ In Figure~\ref{fig:sematic-tau-tuning}, both top-1 and top-5 accuracy attain the
 
 \subsection{Ablation Study}
 
+\begin{figure}[H]
+\centering
+    \includegraphics[width=0.7\textwidth]{../../report/graphs/stacked_losses.png}
+    \caption{Loss decomposition during training with both SW-CRD and KL distillation.}
+    \label{fig:stacked-losses}
+\end{figure}
+
+To understand whether logit-based distillation provides additional benefit when semantic-weighted contrastive learning is used, we conduct an ablation where KL term is included alongside SW-CRD with $\alpha = 1$ in Eq.~\eqref{eq:totla-loss}. Figure X visualizes the loss decomposition and shows the contribution to the total loss from each term during training, with KL providing a smaller but steady contribution. This indicates that, once the initial transient phase is over, both terms are optimized in a relatively balanced way rather than one completely vanishing.
+
+However, the empirical results indicate that including KL actually slightly degrades performance. With KL activated, the model achieves 75.99\% top-1 accuracy, compared to 76.01\% when trained with SW-CRD alone. Test loss is also noticeably higher (0.9527 vs. 0.8525). This suggests that KL interacts suboptimally with the SW-CRD objective: once the student is strongly guided by feature-space contrastive alignment, the softened-output matching imposed by KL may introduce conflicting gradients or unnecessary regularization.
+
 \subsection{Uniform Manifold Approximation and Projection (UMAP) Feature Analysis}
 
 \begin{figure}[H]
@@ -267,7 +279,6 @@ In Figure~\ref{fig:sematic-tau-tuning}, both top-1 and top-5 accuracy attain the
 To qualitatively evaluate how contrastive distillation shapes the student’s representation space, we project the final-layer features of the teacher ($\texttt{resnet32x4\_vanilla}$), CRD student, and our SW-CRD student ($\tau_{\text{SW}}=0.5$) into 2-D using UMAP. This visualization allows us to compare the geometric structure induced by different training schemes.
 
 We observe in Figure~\ref{fig:UMAP} that the teacher’s representation space is much more cleanly separated, with each class forming a compact cluster. Both CRD and SW-CRD students broadly preserve this relative geometry, reflecting the effect of contrastive distillation. However, for semantically similar classes such as 3 vs. 4 (red vs. purple) and 6 vs. 7 (pink vs. gray), SW-CRD exhibits slightly wider separation while for CRD, clusters almost completely overlap with each other, indicating improved separation of hard class pairs.
-
 
 \section{Conclusion}
 

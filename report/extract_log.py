@@ -47,7 +47,16 @@ def main():
     parser.add_argument(
         "--tags",
         nargs="+",
-        default=["train_loss", "train_acc", "test_loss", "test_acc", "test_acc_top5"],
+        default=[
+            "train_loss",
+            "train_acc",
+            "train_loss_cls",
+            "train_loss_div",
+            "train_loss_kd",
+            "test_loss",
+            "test_acc",
+            "test_acc_top5",
+        ],
         help="Scalar tags to export. Only tags found in the event file will be kept.",
     )
     parser.add_argument(

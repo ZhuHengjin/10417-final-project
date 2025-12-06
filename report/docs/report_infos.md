@@ -34,6 +34,10 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
     python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.5_1_64 --output report/logs/crd_sw_k64.csv
     ```
 
+    ```bash
+    python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:1.0_b:0.8_sw:1.0_tau:0.5_1 --output report/logs/crd_sw_a1.csv
+    ```
+
 - plot training curves
     ```bash
     python3 report/plot_training_curves.py --csv report/logs/kd.csv report/logs/rkd.csv report/logs/crd.csv --out_dir report/graphs
