@@ -15,8 +15,8 @@ fig, (ax_top, ax_bottom) = plt.subplots(
 )
 
 # ======== Plot on both axes (so it looks like ONE dataset) ========
-ax_top.plot(taus, top5, marker='s', linestyle='--', color='lightgreen', linewidth=1.5)
-ax_bottom.plot(taus, top1, marker='o', color='tab:green', linewidth=2.5)
+ax_top.plot(taus, top5, marker='s', linestyle='--', color='lightgreen', linewidth=1.5, label='Top-5 Accuracy')
+ax_bottom.plot(taus, top1, marker='o', color='tab:green', linewidth=2.5, label='Top-1 Accuracy')
 
 # ======== Set y-axis ranges (keep middle blank) ========
 ax_top.set_ylim(93.9, 94.7)
@@ -40,6 +40,8 @@ ax_bottom.set_xlabel(r'Temperature $\tau$', fontsize=13)
 # fig.suptitle(r'Effect of Temperature $\tau$ on SW-CRD Performance', fontsize=14)
 
 ax_bottom.grid(alpha=0.3)
+ax_top.legend(loc='best', fontsize=11)
+ax_bottom.legend(loc='best', fontsize=11)
 ax_top.grid(alpha=0.3)
 
 plt.tight_layout(rect=[0.04, 0.0, 1, 0.95])
