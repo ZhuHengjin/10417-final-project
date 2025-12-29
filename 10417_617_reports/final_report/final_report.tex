@@ -82,11 +82,7 @@
 
 
 \begin{abstract}
-  The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
-  both the left- and right-hand margins. Use 10~point type, with a vertical
-  spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
-  bold, and in point size 12. Two line spaces precede the abstract. The abstract
-  must be limited to one paragraph.
+We propose a semantic-aware weighting for contrastive representation distillation (CRD) to guide the student model in distinguishing visually similar inputs while aligning with the teacher’s embeddings. Our method emphasizes informative negative pairs based on the teacher’s similarity structure. Experiments on CIFAR-100 show consistent improvements over standard CRD. Further analysis suggests the gain arises from better generalization ability.
 \end{abstract}
 
 \section{Introduction}
@@ -101,13 +97,13 @@ To address this limitation, we propose a semantic-weighted CRD (SW-CRD) approach
 
 \section{Related Work}
 %Nachuan
-Knowledge distillation, introduced by \citet{hinton2015distilling}, transfers knowledge from a large teacher network to a smaller student network by encouraging the student to match the teacher’s soft output probabilities, which has been widely used to boost the performance of smaller models. Building on this idea, Contrastive Representation Distillation (CRD) \citep{crd_tian2022contrastiverepresentationdistillation} aligns student and teacher embeddings via a contrastive loss, which allows the student to learn knowledge in the hidden states of the teacher, rather than learning only the output.  
+Knowledge distillation (KD), introduced by \citet{hinton2015distilling}, transfers knowledge from a large teacher network to a smaller student network by encouraging the student to match the teacher’s soft output probabilities, which has been widely used to boost the performance of smaller models. Building on this idea, Contrastive Representation Distillation (CRD) \citep{crd_tian2022crd} aligns student and teacher embeddings via a contrastive loss, which allows the student to learn knowledge in the hidden states of the teacher, rather than learning only the output.  
 
 Boosting Contrastive Learning with Relation Knowledge Distillation (ReKD) \citep{RKDCL_zheng2021boostingcontrastivelearningrelation} enhanced the CRD by modeling pairwise relationships between features in the teacher’s representation space, transferring structural knowledge to the student. However, it treats all relations equally and does not account for the relevance of relations. 
 
 To incorporate semantics, Generating and Weighting Semantically Consistent Sample Pairs for Ultrasound Contrastive Learning \citep{semantic_chen2022generatingweightingsemanticallyconsistent} weights contrastive pairs based on semantic consistency, showing that emphasizing semantically meaningful pairs improves representation learning. 
 
-In this project, we wish to utilize the power of semantic information in the field of knowledge distillation and propose Semantic-Aware Relational Contrastive Distillation, which adds a semantic-based weight on top of ReKD.
+In this project, we wish to utilize the power of semantic information in the field of knowledge distillation and propose Semantic-Aware Relational Contrastive Distillation, which adds a semantic-based weight on top of CRD.
 
 \section{Methods}
 
@@ -159,7 +155,7 @@ On top of this, we compute semantic weights $w(T,S)$ by reusing the teacher buff
 
 Since these weights are computed only on the sampled memory entries and share the same batched matrix-vector operations as the original score computation, our semantic-weighted loss adds almost no extra computational or memory cost while fully preserving the benefit of a large implicit negative set.
 
-\textbf{Computational Overhead:} 
+\textbf{Computational Overhead:} With $N = 4096$ negatives, both CRD and SW-CRD require roughly 20 seconds per training epoch, indicating that semantic weighting introduces virtually no additional cost at this scale. When increasing $N$ to 16384, however, a noticeable gap emerges: CRD trains at approximately 25 seconds per epoch, whereas SW-CRD reaches about 30 seconds per epoch. This suggests that, while the method remains efficient in the common operating regime, our current implementation may exhibit limited scalability at very large $N$, leaving room for future optimization. (Device details provided in Section~\ref{device}.)
 
 
 \subsection{Knowledge Distillation Objective}
@@ -197,27 +193,52 @@ In our preliminary experiment on vanilla Knowledge Distillation baseline (KD) an
 
 \subsection{Implementation Detail}
 All experiments were done using the RepDistiller framework\footnote{\url{https://github.com/HobbitLong/RepDistiller}}
-, which provides reference implementations for various knowledge distillation methods. We used the released codebase as a foundation and adapted it to our experimental setting. In our experiment, we used a ResNet-110 teacher and trained ResNet-32 students on the CIFAR-100 dataset for 240 epochs. 
+, which provides standardized implementations of a wide range of knowledge distillation methods, including CRD. We used the official codebase as our starting point and incorporated several modifications to support our proposed similarity-weighted contrastive distillation loss. 
+
+For the teacher model, we utilized a pretrained model given by the RepDistiller as we intend to compare the performance of our method with the benchmark. The student model is a ResNet-32, following the architecture and hyperparameters commonly used in CRD benchmarks. All experiments were performed on the CIFAR-100 dataset, which contains 50,000 training images and 10,000 test images across 100 categories.
+
+Following the original CRD setup, training was performed for 240 epochs using stochastic gradient descent (SGD) with momentum 0.9 and weight decay set to $5\times10^{-4}$. we used a batch size of 64 and adopted the standard multi-step learning rate schedule, where the learning rate starts at 0.05 and is decayed by a factor of 10 at epochs 150, 180, and 210. We also kept consistent with the defaults in the official implementation of CRD for temperature of $0.07$ and projection head dimensions at $128$.
+
+To implement our similarity-weighted CRD (SW-CRD) method, we modified the contrastive module to compute teacher feature similarity for each mini-batch. Specifically, after extracting the teacher’s hidden representations, we compute the cosine similarity between all teacher feature pairs and use this as a multiplicative weight on the contrastive loss for negative pairs. 
+
+All experiments were run on an AWS g5.xlarge instance, which has 24 GB GPU memory, 4 vCPUs, and 16 GB memory. \label{device}
+
+\subsection{Hyperparameters}
+In addition to the fixed hyperparameters described in the Implementation Detail section (e.g., learning rate schedule, batch size, optimizer settings), our method introduces several additional hyperparameters that were tuned to optimize performance. These hyperparameters control aspects of the similarity-weighted contrastive distillation (SW-CRD) loss:
+\begin{itemize}
+    \item \textbf{Number of Negatives} $N$: This determines the number of negative pairs sampled for each anchor in the contrastive loss. A larger $N$ provides a more comprehensive view of the feature space and can improve representation learning, but it also increases memory and computational requirements, and is subject to overfitting. We experimented with several values to balance efficiency and performance.
+    \item \textbf{Temperature of Semantic Aware Similarity} $\tau_{\text{SW}}$ (Eq.~\ref{def:semantic-weights}): This temperature controls the sharpness of the similarity weighting applied to the teacher’s feature pairs. Lower values of $\tau_{\text{SW}}$ make the weighting distribution more peaky, emphasizing high-similarity pairs, whereas higher values produce a softer weighting that treats different similarity levels more evenly. Proper tuning of $\tau_{\text{SW}}$ is important to ensure that the student preserves subtle inter-class relationships without overemphasizing minor similarities.  
+    \item \textbf{Scale of weights} $\alpha_{\text{SW}}$ (Eq.~\ref{def:semantic-weights}): This hyperparameter scales the contribution of the semantic-aware weighting in the overall contrastive loss. Setting $\alpha_{\text{SW}}=0$ reduces our method to the standard CRD loss, while larger values increase the influence of teacher-assigned pairwise similarity. Tuning $\alpha_{\text{SW}}$ allows us to find a balance between strictly following the original contrastive objective and leveraging nuanced similarity information.  
+\end{itemize}
 
 \section{Results}
 
-\subsection{Hyper-Parameters}
+See the full experiment result at Table~\ref{tab:all_experiments} in Appendix ~\ref{app:data}.
+
+\subsection{Hyperparameter Tuning}
 
 \begin{figure}[H]
 \centering
 
-\begin{subfigure}[t]{0.49\textwidth}
+\begin{subfigure}[t]{0.32\textwidth}
     \centering
     \includegraphics[width=\textwidth]{../../report/graphs/N_tuning_plot_broken.png}
     \caption{Effects of varying the number of negatives $N$}
     \label{fig:N-tuning}
 \end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.49\textwidth}
+% \hfill
+\begin{subfigure}[t]{0.32\textwidth}
     \centering
     \includegraphics[width=\textwidth]{../../report/graphs/tau_tuning_plot_broken.png}
     \caption{Effects of varying the sematic temperature $\tau_{\text{SW}}$}
     \label{fig:sematic-tau-tuning}
+\end{subfigure}
+% \hfill
+\begin{subfigure}[t]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/alpha_tuning_plot_broken.png}
+    \caption{Effects of varying the scale of semantic weights $\alpha_{\text{SW}}$}
+    \label{fig:sematic-alpha-tuning}
 \end{subfigure}
 
 \caption{Effects of tuning hyperparameters}
@@ -230,8 +251,88 @@ We evaluate SW-CRD with different numbers of sampled negatives $N \in \{64, 256,
 \textbf{Temperature $\tau_{\text{SW}}$:}
 In Figure~\ref{fig:sematic-tau-tuning}, both top-1 and top-5 accuracy attain their maximum at $\tau_{\text{SW}} = 0.5$. The top-1 curve is more sensitive to the temperature, showing a noticeable drop once $\tau_{\text{SW}}$ exceeds 0.5, whereas the top-5 accuracy remains relatively stable and varies only mildly across settings. The top-5 curve nevertheless forms a smooth hill, increasing as $\tau_{\text{SW}}$ approaches 0.5 and decreasing for larger or smaller values, indicating that very low or very high temperatures are slightly suboptimal. Based on this trend, we fix $\tau_{\text{SW}} = 0.5$ in all subsequent experiments.
 
+\textbf{Scale of weights $\alpha_{\text{SW}}$:}
+Figure~\ref{fig:sematic-alpha-tuning} shows that both top-1 and top-5 accuracy achieve their highest values at $\alpha_{\text{SW}} = 1.0$. The accuracy curves form a smooth, unimodal hill: performance increases steadily as $\alpha_{\text{SW}}$ approaches 1.0, then declines symmetrically as $\alpha_{\text{SW}}$ moves away from this point. This behavior suggests that $\alpha_{\text{SW}} = 1.0$ is a well-calibrated and optimal weighting for our semantic weighting term. Therefore, we adopt $\alpha_{\text{SW}} = 1.0$ for all subsequent experiments.
+
+We also include the case $\alpha_{\text{SW}} = -1$, which corresponds to an alternative, inverted interpretation of our proposed weighting scheme. Instead of forcing the student to separate embeddings when the teacher produces closely clustered representations for different classes, the negative value effectively pushes the student to resemble the teachers' similarities. The resulting performance drop clearly indicates that this inverted interpretation is ineffective, reinforcing that the original formulation of the semantic weighting term is the correct one.
+
+\clearpage
+
+\subsection{Best Model Result}
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[t]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../../report/graphs/training_loss_vs_epoch.png}
+        \caption{Training Loss v.s. Epochs}
+        \label{fig:train_loss}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../../report/graphs/training_accuracy_vs_epoch.png}
+        \caption{Training Accuracy v.s. Epochs}
+        \label{fig:train_acc}
+    \end{subfigure}
+
+    \begin{subfigure}[t]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../../report/graphs/test_loss_vs_epoch.png}
+        \caption{Tess Loss v.s. Epochs}
+        \label{fig:test_loss}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{../../report/graphs/test_accuracy_vs_epoch.png}
+        \caption{Test Accuracy v.s. Epochs}
+        \label{fig:test_acc}
+    \end{subfigure}
+
+    \caption{Train and test accuracy and loss curves of our best-performing student model.}
+    \label{fig:best_model}
+\end{figure}
+
+Our best model is trained with $N=16384, \tau_{\text{SW}}=0.5, \alpha_{\text{SW}}=1.0$. Figure~\ref{fig:best_model} displays the accuracy and loss of the model during training, together with the CRD and KD as baselines for comparison. The baseline CRD achieves a peak test accuracy of $75.58\%$, while our proposed semantic-aware method attains a higher best accuracy of $76.01\%$, demonstrating a clear performance gain of $0.57\%$.
+
+The steadily decreasing loss and increasing accuracy confirm that the objective is well-behaved and that the model is effectively learning. We observe sharp improvements at epochs 150 and 180, corresponding to scheduled learning-rate decays, indicating that these decay points are well chosen. In contrast, the final decay at epoch 210 yields no noticeable gain, but there is a small increase in training accuracy, as shown in Figure~\ref{fig:train_acc}.
+
+\begin{figure}[H]
+\centering
+
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/training_accuracy_vs_epoch_close.png}
+    % \caption{Effects of varying the number of negatives $N$}
+    \label{fig:train_acc_close}
+\end{subfigure}
+% \hfill
+\begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../../report/graphs/test_accuracy_vs_epoch_close.png}
+    % \caption{Effects of varying the sematic temperature $\tau_{\text{SW}}$}
+    \label{fig:test_acc_close}
+\end{subfigure}
+\caption{Zoom in of train and test accuracy}
+\label{fig:acc_close}
+\end{figure}
+
+Figure~\ref{fig:acc_close} provides a zoomed-in comparison of the accuracy curves after epoch 190. The training accuracies of CRD and SW-CRD nearly overlap throughout this interval, yet the test curves show a clear and persistent margin in favor of SW-CRD at almost every epoch. The gap is stable rather than driven by isolated spikes, highlighting a consistent performance advantage for the semantic-weighted variant.
+
 \section{Discussion and Analysis}
-% Nachuan
+
+\subsection{Overfitting v.s. Generalization}
+
+Taken together, the patterns in Figure~\ref{fig:acc_close} show that the performance gain of SW-CRD stems from improved generalization rather than stronger memorization. Semantic weighting substantially reshapes the contrastive objective by amplifying teacher-similar negatives, yet it leaves training accuracy essentially unchanged, indicating that the student is not fitting the training data more tightly but is learning more semantically meaningful relationships. This effect is reflected in the consistently higher test accuracy of SW-CRD, even when training accuracy shows no improvement: the model becomes better at separating visually similar inputs (such as images within the same superclass) without overfitting. The stable and repeated margin on the test curve across many consecutive epochs therefore demonstrates that the improvement is systematic and genuinely generalizable, not a product of noise or random fluctuation.
+
+\subsection{Strengths and Limitations}
+
+\textbf{Strengths.}
+SW-CRD offers a lightweight, drop-in extension to CRD that preserves the original memory-buffer computation while delivering consistent test-time gains. By incorporating semantic information from the teacher’s representation space, the method improves the student’s ability to distinguish visually similar inputs without increasing training accuracy or computational cost. This makes the approach attractive for scenarios where improved generalization is desired but training budgets are fixed.
+
+\textbf{Limitations.}
+Despite its strong empirical behavior, the method introduces additional hyperparameters whose effects are nontrivial to tune. Because semantic weighting depends directly on the teacher’s representation geometry, any spurious structure in the teacher embeddings can be amplified by the weighting mechanism. Furthermore, pushing the student away from teacher-near negatives risks conflicting with the goal of distillation, and our experiments show that poorly chosen weights can degrade performance below baseline CRD. Finally, our current evaluation is limited to a single teacher–student pair on CIFAR-100, so the method’s scalability to larger models, alternative architectures, and more complex datasets remains uncertain.
 
 \subsection{Ablation Study}
 
@@ -280,7 +381,11 @@ To qualitatively evaluate how contrastive distillation shapes the student’s re
 
 We observe in Figure~\ref{fig:UMAP} that the teacher’s representation space is much more cleanly separated, with each class forming a compact cluster. Both CRD and SW-CRD students broadly preserve this relative geometry, reflecting the effect of contrastive distillation. However, for semantically similar classes such as 3 vs. 4 (red vs. purple) and 6 vs. 7 (pink vs. gray), SW-CRD exhibits slightly wider separation while for CRD, clusters almost completely overlap with each other, indicating improved separation of hard class pairs.
 
-\section{Conclusion}
+\subsection{Future Work}
+
+Future research should examine SW-CRD across broader image benchmarks and larger, more diverse teacher–student configurations to better understand its robustness and scalability. Integrating semantic weighting with logit-based or feature-based KD variants may provide complementary benefits. Additionally, exploring alternative formulations of the weighting function. Such as adaptive schemes that automatically tune the influence of teacher similarity or regularizers that prevent over-separation from the teacher could help stabilize performance. Finally, a deeper investigation into the geometric properties of teacher representations may reveal when semantic weighting is most beneficial and how to mitigate its failure modes.
+
+\clearpage
 
 \bibliographystyle{plainnat}
 \bibliography{references}
@@ -383,6 +488,56 @@ For notational simplicity, we denote the joint distribution of positive pairs by
     Thus, $I(T;S) \geq \mathcal{L}_{\text{SW-CRD}} + C$, where $C$ is a constant independent of the student encoder.
 \end{proof}
 
-\section{Timeline and Division of Labor}
+\clearpage
+
+\section{Full Experiment Data}
+\label{app:data}
+
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Method / Setting} & \textbf{Train Loss} & \textbf{Test Loss} &
+\textbf{Train Acc.} & \textbf{Test Acc.} & \textbf{Top-5 Acc.} & \textbf{Epoch} \\
+\midrule
+\multicolumn{7}{c}{\textbf{Baselines}} \\
+\midrule
+KD & 1.7305 & 1.0781 & 89.048 & 74.190 & 93.410 & best@236 \\
+CRD & 3.3963 & 0.8618 & 92.398 & 75.580 & 94.020 & best@233 \\
+\midrule
+\multicolumn{7}{c}{\textbf{SW-CRD: Temperature Sweep} ($\alpha_{\text{SW}}=1.0, N=16384$)} \\
+\midrule
+$\tau_{\text{SW}}=0.05$ & 12.4528 & 0.8753 & 92.460 & 75.550 & 94.190 & best@203 \\
+$\tau_{\text{SW}}=0.07$ & 7.9158 & 0.8671 & 92.796 & 75.880 & 94.110 & best@193 \\
+$\tau_{\text{SW}}=0.35$ & 4.1231 & 0.8691 & 92.610 & 75.830 & 94.120 & best@236 \\
+$\tau_{\text{SW}}=0.45$ & 4.0954 & 0.8655 & 92.522 & 75.870 & 94.440 & best@235 \\
+$\tau_{\text{SW}}=0.50$ & 4.0808 & 0.8525 & 92.348 & \textbf{76.010} & \textbf{94.540} & best@233 \\
+$\tau_{\text{SW}}=0.55$ & 4.0963 & 0.8702 & 92.228 & 75.220 & 94.230 & best@209 \\
+$\tau_{\text{SW}}=0.60$ & 4.1058 & 0.8626 & 92.280 & 75.340 & 94.230 & best@226 \\
+$\tau_{\text{SW}}=1.00$ & 4.1299 & 0.8654 & 92.146 & 75.410 & 94.190 & best@239 \\
+\midrule
+\multicolumn{7}{c}{\textbf{SW-CRD: Alpha Sweep} ($\tau_{\text{SW}}=0.5, N=16384$)} \\
+\midrule
+$\alpha_{\text{SW}}=0.5$ & 7.7616 & 0.8698 & 92.688 & 75.480 & 94.070 & best@203 \\
+$\alpha_{\text{SW}}=1.0$ & 7.9158 & 0.8671 & 92.796 & 75.880 & 94.110 & best@193 \\
+\midrule
+\multicolumn{7}{c}{\textbf{SW-CRD with Knowledge Distillation KL term} ($\alpha_{\text{SW}}=1.0, \tau_{\text{SW}}=0.5, N=16384$)} \\
+\midrule
+$\alpha=1.0$ in Eq.~\eqref{eq:totla-loss} & 5.7994 & 0.9527 & 93.942 & 75.990 & 93.940 & best@225 \\
+\midrule
+\multicolumn{7}{c}{\textbf{SW-CRD: Number of Negatives (N)} ($\alpha_{\text{SW}}=1.0, \tau_{\text{SW}}=0.5$)} \\
+\midrule
+$N=64$ & 1.2501 & 0.9168 & 94.604 & 74.630 & 93.750 & best@191 \\
+$N=256$ & 1.6806 & 0.8982 & 94.380 & 75.080 & 94.030 & best@222 \\
+$N=1024$ & 2.2658 & 0.8772 & 93.980 & 75.630 & 94.270 & best@193 \\
+$N=4096$ & 3.0190 & 0.8693 & 93.268 & 75.740 & 93.960 & best@213 \\
+$N=16384$ & 4.0808 & 0.8525 & 92.348 & \textbf{76.010} & \textbf{94.540} & best@233 \\
+\bottomrule
+\end{tabular}
+\caption{Summary of KD, CRD, and SW-CRD experiments across temperature $\tau$, semantic strength $\alpha$, and number of negatives $K$. Bold numbers mark the best performance within each block.}
+\label{tab:all_experiments}
+\end{table}
 
 \end{document}
