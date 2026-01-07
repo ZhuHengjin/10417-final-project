@@ -4,6 +4,10 @@
 python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240.pth --distill crd_sw --model_s resnet8x4 -a 0 -b 0.8 --trial 1 --sw_alpha 1 --sw_tau 0.55
 ```
 
+```
+python train_student.py --path_t ./save/models/wrn_40_2_vanilla/ckpt_epoch_240.pth --distill crd_sw --model_s wrn_40_1 -a 0 -b 0.8 --trial 1 --sw_alpha 1 --sw_tau 0.6
+```
+
 - Extract csv from the `logs` folder
 
     ```bash
@@ -38,6 +42,14 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
     python3 report/extract_log.py --run_dir logs/S:resnet8x4_T:resnet32x4_cifar100_crd_sw_r:1_a:1.0_b:0.8_sw:1.0_tau:0.5_1 --output report/logs/crd_sw_a1.csv
     ```
 
+    ```bash
+    python3 report/extract_log.py --run_dir logs/S:wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.55_1 --output report/logs/wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.55_1.csv
+    ```
+
+    ```bash
+    python3 report/extract_log.py --run_dir logs/S:wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.5_1 --output report/logs/wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.5_1.csv
+    ```
+
 - plot training curves
     ```bash
     python3 report/plot_training_curves.py --csv report/logs/kd.csv report/logs/rkd.csv report/logs/crd.csv --out_dir report/graphs
@@ -50,7 +62,7 @@ python train_student.py --path_t ./save/models/resnet32x4_vanilla/ckpt_epoch_240
 - report best metrics
 
     ```bash
-    python3 report/report_best_metrics.py --csv report/logs/crd_sw_k64.csv
+    python3 report/report_best_metrics.py --csv report/logs/wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.5_1.csv
     ```
 
 ## Metric values
@@ -219,6 +231,24 @@ Results for report/logs/crd_sw:1.0_tau:0.5_1.csv (16384):
 - Training Accuracy: 92.3480 at epoch 222
 - Test Accuracy: 76.0100 at epoch 233
 - Test Top-5 Accuracy: 94.5400 at epoch 216
+
+---
+
+Results for report/logs/wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.55_1.csv:
+- Training Loss: 5.0194 at epoch 211
+- Test Loss: 0.9848 at epoch 181
+- Training Accuracy: 92.1360 at epoch 238
+- Test Accuracy: 74.0500 at epoch 199
+- Test Top-5 Accuracy: 93.3200 at epoch 184
+
+---
+
+Results for report/logs/wrn_40_1_T:wrn_40_2_cifar100_crd_sw_r:1_a:0.0_b:0.8_sw:1.0_tau:0.5_1.csv:
+- Training Loss: 6.3343 at epoch 167
+- Test Loss: 0.9924 at epoch 156
+- Training Accuracy: 83.4660 at epoch 166
+- Test Accuracy: 72.3300 at epoch 159
+- Test Top-5 Accuracy: 93.0600 at epoch 163
 
 ## Analysis of Results
 
